@@ -1,0 +1,11 @@
+name: OpsPulse Dev
+values:
+  - key: baseUrl
+    value: 'http://localhost:3000'
+    enabled: true
+  - key: authToken
+    value: ''
+    enabled: true
+  - key: userId
+    value: ''
+    enabled: true

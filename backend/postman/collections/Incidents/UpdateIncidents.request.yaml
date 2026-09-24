@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{base_url}}/api/incidents/ffb39a3d-0952-42a8-9d5b-f66170e85838/status"
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \ \"status\": \"INVESTIGATING\"\r
+
+    }"
+order: 4496891042077990

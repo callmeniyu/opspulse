@@ -1,0 +1,3 @@
+$kind: collection
+name: Auth
+description: Authentication API requests for OpsPulse — register, login, and get current user.

@@ -1,0 +1,36 @@
+$kind: http-request
+name: Get Current User
+order: 3000
+url: "{{base_url}}/api/auth/me"
+method: GET
+headers:
+  Authorization: Bearer {{authToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const response = pm.response.json();
+
+      pm.test("Status code is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has user object", function () {
+        pm.expect(response).to.have.property("user");
+      });
+
+      pm.test("User has required fields", function () {
+        const user = response.user;
+        pm.expect(user).to.have.property("id");
+        pm.expect(user).to.have.property("name");
+        pm.expect(user).to.have.property("email");
+      });
+
+      pm.test("Password is not exposed in response", function () {
+        pm.expect(response.user).to.not.have.property("password");
+        pm.expect(response.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("Response time is less than 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+    language: text/javascript

@@ -1,0 +1,51 @@
+$kind: http-request
+order: 1000
+url: "{{base_url}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Test User",
+      "email": "testuser@example.com",
+      "password": "password123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const response = pm.response.json();
+
+      pm.test("Status code is 201 Created", function () {
+        pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has user object", function () {
+        pm.expect(response).to.have.property("user");
+      });
+
+      pm.test("User has required fields", function () {
+        const user = response.user;
+        pm.expect(user).to.have.property("id");
+        pm.expect(user).to.have.property("name");
+        pm.expect(user).to.have.property("email");
+      });
+
+      pm.test("User name matches request", function () {
+        pm.expect(response.user.name).to.eql("Test User");
+      });
+
+      pm.test("User email matches request", function () {
+        pm.expect(response.user.email).to.eql("testuser@example.com");
+      });
+
+      pm.test("Password is not exposed in response", function () {
+        pm.expect(response.user).to.not.have.property("password");
+        pm.expect(response.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("Response time is less than 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+    language: text/javascript

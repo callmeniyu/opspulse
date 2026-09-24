@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/api/incidents/ffb39a3d-0952-42a8-9d5b-f66170e85838/members"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"userId\":\"5bce3352-3d57-4c18-95b2-d63adaba8459\",\r
+
+    \    \"role\":\"VIEWER\"\r
+
+    }"
+order: 1790269131408

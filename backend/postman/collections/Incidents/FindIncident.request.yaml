@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{base_url}}/api/incidents/ffb39a3d-0952-42a8-9d5b-f66170e85838"
+method: GET
+order: 4470834981331273

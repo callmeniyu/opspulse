@@ -1,0 +1,55 @@
+$kind: http-request
+order: 2000
+url: "{{base_url}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "testuser@example.com",
+      "password": "password123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const response = pm.response.json();
+
+      pm.test("Status code is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has token", function () {
+        pm.expect(response).to.have.property("token");
+        pm.expect(response.token).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response has user object", function () {
+        pm.expect(response).to.have.property("user");
+      });
+
+      pm.test("User has required fields", function () {
+        const user = response.user;
+        pm.expect(user).to.have.property("id");
+        pm.expect(user).to.have.property("name");
+        pm.expect(user).to.have.property("email");
+      });
+
+      pm.test("Password is not exposed in response", function () {
+        pm.expect(response.user).to.not.have.property("password");
+        pm.expect(response.user).to.not.have.property("password_hash");
+      });
+
+      pm.test("Response time is less than 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // Save token and userId to environment for use in subsequent requests
+      if (response.token) {
+        pm.environment.set("authToken", response.token);
+      }
+      if (response.user && response.user.id) {
+        pm.environment.set("userId", response.user.id);
+      }
+    language: text/javascript

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{base_url}}/api/incidents/"
+method: GET
+order: 1079478129892499
