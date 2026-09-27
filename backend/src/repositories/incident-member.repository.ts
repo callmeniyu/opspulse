@@ -1,5 +1,5 @@
 import { pool } from "../db/client.js";
-import type { IncidentMemberRole } from "../types/incident-member.js";
+import type { IncidentMemberRole } from "../types/incidentMemberTypes.js";
 
 export async function addMember(incidentId: string, userId: string, role: IncidentMemberRole) {
   const result = await pool.query(

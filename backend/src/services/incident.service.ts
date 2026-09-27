@@ -2,12 +2,12 @@ import { createIncident, findIncidents, findIncidentById, updateIncident, update
 
 import type { CreateIncidentInput, UpdateIncidentInput, UpdateIncidentStatusInput } from "../validators/incident.validator.js";
 
-export function create(input: CreateIncidentInput, userId: string) {
-  return createIncident(input.title, input.description, input.severity, userId);
+export async function create(input: CreateIncidentInput, userId: string) {
+  return await createIncident(input.title, input.description, input.severity, userId);
 }
 
 export async function list() {
-  return findIncidents();
+  return await findIncidents();
 }
 
 export async function getById(id: string) {
@@ -26,7 +26,7 @@ export async function update(id: string, input: UpdateIncidentInput) {
     throw new Error("Incident not found");
   }
 
-  return updateIncident(id, input.title, input.description, input.severity);
+  return await updateIncident(id, input.title, input.description, input.severity);
 }
 
 export async function changeStatus(id: string, input: UpdateIncidentStatusInput) {
@@ -36,5 +36,5 @@ export async function changeStatus(id: string, input: UpdateIncidentStatusInput)
     throw new Error("Incident not found");
   }
 
-  return updateIncidentStatus(id, input.status);
+  return await updateIncidentStatus(id, input.status);
 }

@@ -18,25 +18,24 @@ if (!JWT_SECRET) {
 }
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers.cookie;
-  if (!token?.startsWith("token=")) {
-    res.status(401).json({
+  const cookies = req.headers.cookie || "";
+  const token = cookies
+    .split("; ")
+    .find((cookie) => cookie.startsWith("token="))
+    ?.split("=")[1];
+
+  console.log("Token::", token);
+
+  if (!token) {
+    return res.status(401).json({
       message: "Invalid authentication token format ",
     });
   }
 
-  const tokenValue = token?.split("=")[1];
-
-  if (!tokenValue) {
-    res.status(401).json({
-      message: "Authentication required",
-    });
-
-    return;
-  }
-
   try {
-    const payload = jwt.verify(tokenValue, JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
+    console.log("User", payload);
+
     if (typeof payload === "string" || typeof payload.userId !== "string") {
       res.status(401).json({
         message: "Invalid token",

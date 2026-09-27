@@ -1,7 +1,7 @@
 import { addMember, findMembers, removeMember } from "../repositories/incident-member.repository.js";
 
 import { findIncidentById } from "../repositories/incident.repository.js";
-import type { IncidentMemberRole } from "../types/incident-member.js";
+import type { IncidentMemberRole } from "../types/incidentMemberTypes.js";
 
 import type { AddMemberInput } from "../validators/incident-member.validator.js";
 

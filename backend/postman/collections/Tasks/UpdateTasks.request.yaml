@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{base_url}}/api/tasks/c9cb939a-8999-4ca4-8123-4ad2d19d70c4"
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \    \"assignedTo\":\"8c0a9f49-4ad3-49c3-b8ca-7409851ff657\"\r
+
+    }"
+order: 3470043779648440

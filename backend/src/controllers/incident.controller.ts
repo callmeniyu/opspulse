@@ -14,7 +14,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
     const incident = await incidentService.create(input, req.user.id);
 
-    res.status(201).json(incident);
+    return res.status(201).json({ incident });
   } catch (error) {
     next(error);
   }
@@ -23,7 +23,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
     const incidents = await incidentService.list();
-    res.json(incidents);
+    return res.json({ incidents });
   } catch (error) {
     next(error);
   }
@@ -32,7 +32,7 @@ export async function list(req: Request, res: Response, next: NextFunction) {
 export async function getById(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
     const incident = await incidentService.getById(req.params.id);
-    res.json(incident);
+    return res.json({ incident });
   } catch (error) {
     next(error);
   }
@@ -42,7 +42,7 @@ export async function update(req: Request<{ id: string }>, res: Response, next: 
   try {
     const input = updateIncidentSchema.parse(req.body);
     const incident = await incidentService.update(req.params.id, input);
-    res.json(incident);
+    return res.json({ incident });
   } catch (error) {
     next(error);
   }
@@ -52,7 +52,7 @@ export async function changeStatus(req: Request<{ id: string }>, res: Response, 
   try {
     const input = updateIncidentStatusSchema.parse(req.body);
     const incident = await incidentService.changeStatus(req.params.id, input);
-    res.json(incident);
+    return res.json(incident);
   } catch (error) {
     next(error);
   }
