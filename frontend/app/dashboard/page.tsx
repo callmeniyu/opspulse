@@ -7,44 +7,30 @@ import { AppShell } from "@/components/layout/AppShell";
 import { IncidentRow } from "@/components/incidents/IncidentRow";
 import { Loading } from "@/components/ui/Loading";
 
-import { api } from "@/lib/api";
-
 import type { Incident } from "@/types/incidentTypes";
 import { Task } from "@/types/taskTypes";
-
-interface IncidentResponse {
-  incidents: Incident[];
-}
-interface TasksResponse {
-  tasks: Task[];
-}
+import { getIncidents } from "@/api/incident.api";
+import { setLoading, setIncidents } from "@/store/slices/incidentSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch } from "@/store/hooks";
 
 export default function DashboardPage() {
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const { loading, items: incidents } = useAppSelector((state) => state.incidents);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    //implement a function to fetch incidents and tasks parallely using Promise.all() from the API and update the state.
-    const fetchIncidentsAndTasks = async () => {
-      const [incidentsResponse, tasksResponse] = await Promise.all([api<IncidentResponse>("/incidents"), api<TasksResponse>("/tasks")]);
+    async function load() {
+      dispatch(setLoading(true));
+      try {
+        const response = await getIncidents();
 
-      setIncidents(incidentsResponse.incidents);
-    };
+        dispatch(setIncidents(response.incidents));
+      } finally {
+        dispatch(setLoading(false));
+      }
+    }
 
-    fetchIncidentsAndTasks();
-
-    // async function load() {
-    //   try {
-    //     const response = await api<IncidentResponse>("/incidents");
-
-    //     setIncidents(response.incidents);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // }
-
-    // load();
+    load();
   }, []);
 
   const active = incidents.filter((incident) => incident.status !== "RESOLVED");

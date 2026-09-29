@@ -1,26 +1,18 @@
-// src/store/slices/incidentSlice.ts
-
+import type { Incident } from "@/types/incidentTypes";
+import { IncidentMember } from "@/types/memberTypes";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { stat } from "fs";
-
-type Incident = {
-  id: string;
-  title: string;
-  description: string | null;
-  status: string;
-  severity: string;
-  created_by: string;
-};
 
 type IncidentState = {
   items: Incident[];
   selectedIncident: Incident | null;
+  selectedIncidentMembers: IncidentMember[];
   loading: boolean;
 };
 
 const initialState: IncidentState = {
   items: [],
   selectedIncident: null,
+  selectedIncidentMembers: [],
   loading: false,
 };
 
@@ -54,12 +46,24 @@ const incidentSlice = createSlice({
       }
     },
 
+    setIncidentMembers: (state, action: PayloadAction<IncidentMember[]>) => {
+      state.selectedIncidentMembers = action.payload;
+    },
+
+    addIncidentMember: (state, action: PayloadAction<IncidentMember>) => {
+      state.selectedIncidentMembers.push(action.payload);
+    },
+
+    removeIncidentMember: (state, action: PayloadAction<string>) => {
+      state.selectedIncidentMembers = state.selectedIncidentMembers.filter((member) => member.id !== action.payload);
+    },
+
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
   },
 });
 
-export const { setIncidents, setSelectedIncident } = incidentSlice.actions;
+export const { setIncidents, setSelectedIncident, setLoading, setIncidentMembers, addIncidentMember, removeIncidentMember } = incidentSlice.actions;
 
 export default incidentSlice.reducer;

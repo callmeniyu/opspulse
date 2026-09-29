@@ -17,7 +17,7 @@ export async function add(req: Request<{ incidentId: string }>, res: Response, n
 
     const result = await incidentMemberService.add(incidentId, input, req.user.id);
 
-    return res.status(201).json(result);
+    return res.status(201).json({ member: result });
   } catch (error) {
     next(error);
   }
@@ -32,7 +32,7 @@ export async function list(req: Request<{ incidentId: string }>, res: Response, 
 
     const result = await incidentMemberService.list(incidentId);
 
-    return res.status(200).json(result);
+    return res.status(200).json({ members: result });
   } catch (error) {
     next(error);
   }
@@ -47,7 +47,7 @@ export async function remove(req: Request<{ incidentId: string; userId: string }
 
     const result = await incidentMemberService.remove(incidentId, userId, req.user.id);
 
-    return res.status(200).json(result);
+    return res.status(200).json({ message: "Member removed successfully", member: result });
   } catch (error) {
     next(error);
   }

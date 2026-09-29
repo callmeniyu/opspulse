@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { SubmitEvent, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -8,9 +8,10 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
-import { api } from "@/lib/api";
-
-import type { IncidentSeverity } from "@/types/incidentTypes";
+import type { Incident, IncidentSeverity } from "@/types/incidentTypes";
+import { setLoading } from "@/store/slices/incidentSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { createIncident } from "@/api/incident.api";
 
 export default function NewIncidentPage() {
   const router = useRouter();
@@ -21,35 +22,29 @@ export default function NewIncidentPage() {
 
   const [severity, setSeverity] = useState<IncidentSeverity>("SEV3");
 
-  const [loading, setLoading] = useState(false);
+  const { loading } = useAppSelector((state) => state.incidents);
+  const dispatch = useAppDispatch();
 
   const [error, setError] = useState("");
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setLoading(true);
+    dispatch(setLoading(true));
     setError("");
 
     try {
-      const response = await api<{
-        incident: {
-          id: string;
-        };
-      }>("/incidents", {
-        method: "POST",
-        body: JSON.stringify({
-          title,
-          description: description || undefined,
-          severity,
-        }),
+      const response = await createIncident({
+        title,
+        description: description || undefined,
+        severity,
       });
 
       router.push(`/incidents/${response.incident.id}`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create incident");
     } finally {
-      setLoading(false);
+      dispatch(setLoading(false));
     }
   }
 

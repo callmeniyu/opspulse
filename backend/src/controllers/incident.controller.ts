@@ -52,7 +52,7 @@ export async function changeStatus(req: Request<{ id: string }>, res: Response, 
   try {
     const input = updateIncidentStatusSchema.parse(req.body);
     const incident = await incidentService.changeStatus(req.params.id, input);
-    return res.json(incident);
+    return res.json({ incident });
   } catch (error) {
     next(error);
   }

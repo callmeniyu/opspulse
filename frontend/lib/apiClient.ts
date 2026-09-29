@@ -2,7 +2,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 type ApiOptions = RequestInit;
 
-export async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { headers, ...requestOptions } = options;
 
   const response = await fetch(`${API_URL}${endpoint}`, {

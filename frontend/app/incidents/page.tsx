@@ -6,33 +6,33 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { IncidentRow } from "@/components/incidents/IncidentRow";
 import { Loading } from "@/components/ui/Loading";
-import { api } from "@/lib/api";
 
-import type { Incident, IncidentSeverity, IncidentStatus } from "@/types/incidentTypes";
-
-interface IncidentResponse {
-  incidents: Incident[];
-}
+import type { IncidentSeverity, IncidentStatus } from "@/types/incidentTypes";
+import { getIncidents } from "@/api/incident.api";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { setLoading, setIncidents } from "@/store/slices/incidentSlice";
 
 export default function IncidentsPage() {
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
 
   const [status, setStatus] = useState<IncidentStatus | "ALL">("ALL");
 
   const [severity, setSeverity] = useState<IncidentSeverity | "ALL">("ALL");
 
+  const dispatch = useAppDispatch();
+  const { items: incidents, loading } = useAppSelector((state) => state.incidents);
+
   useEffect(() => {
     async function load() {
-      try {
-        const response = await api<IncidentResponse>("/incidents");
+      dispatch(setLoading(true));
 
-        setIncidents(response.incidents);
+      try {
+        const response = await getIncidents();
+        dispatch(setIncidents(response.incidents));
+      } catch (error) {
+        console.error("Error fetching incidents:", error);
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     }
 

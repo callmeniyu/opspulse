@@ -90,8 +90,6 @@ export async function findIncidentById(id: string) {
     [id],
   );
 
-  console.log("Found Incident: ", result.rows[0]);
-
   return result.rows[0] ?? null;
 }
 

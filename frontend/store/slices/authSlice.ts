@@ -1,12 +1,5 @@
-// src/store/slices/authSlice.ts
-
 import { createSlice } from "@reduxjs/toolkit";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
+import { User } from "../../../backend/src/types/UserTypes";
 
 type AuthState = {
   user: User | null;

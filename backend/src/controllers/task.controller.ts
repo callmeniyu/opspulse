@@ -13,7 +13,7 @@ export async function create(req: Request<{ incidentId: string }, {}, CreateTask
 
     const task = await taskService.create(incidentId, input);
 
-    res.status(201).json(task);
+    res.status(201).json({ task });
   } catch (error) {
     next(error);
   }
@@ -27,7 +27,7 @@ export async function list(req: Request<{ incidentId: string }, {}, {}>, res: Re
 
     const { incidentId } = req.params;
     const tasks = await taskService.list(incidentId);
-    res.json(tasks);
+    res.json({ tasks });
   } catch (error) {
     next(error);
   }
@@ -41,7 +41,7 @@ export async function update(req: Request<{ taskId: string }, {}, UpdateTaskInpu
     const { taskId } = req.params;
     const input = updateTaskSchema.parse(req.body);
     const task = await taskService.update(taskId, input);
-    res.json(task);
+    res.json({ task });
   } catch (error) {
     next(error);
   }

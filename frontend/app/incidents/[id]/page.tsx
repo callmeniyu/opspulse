@@ -14,45 +14,43 @@ import { MemberList } from "@/components/members/MemberList";
 import { TaskList } from "@/components/tasks/TaskList";
 import { Loading } from "@/components/ui/Loading";
 
-import { api } from "@/lib/api";
-
+import { getIncidentById } from "@/api/incident.api";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { setLoading, setSelectedIncident, setIncidentMembers } from "@/store/slices/incidentSlice";
 import type { Incident } from "@/types/incidentTypes";
 import type { IncidentMember } from "@/types/memberTypes";
 import type { Task } from "@/types/taskTypes";
+import { getMembersByIncidentId } from "@/api/member.api";
+import { getTasksByIncidentId } from "@/api/tasks.api";
 
 export default function IncidentDetailsPage() {
   const params = useParams();
 
   const id = params.id as string;
 
-  const [incident, setIncident] = useState<Incident | null>(null);
+  const dispatch = useAppDispatch();
 
-  const [members, setMembers] = useState<IncidentMember[]>([]);
+  const { loading, selectedIncident: incident, selectedIncidentMembers: members } = useAppSelector((state) => state.incidents);
 
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      dispatch(setLoading(true));
       try {
-        const [incidentResponse, memberResponse, taskResponse] = await Promise.all([
-          api<{ incident: Incident }>(`/incidents/${id}`),
+        const [incidentResponse, memberResponse, taskResponse] = await Promise.all([getIncidentById(id), getMembersByIncidentId(id), getTasksByIncidentId(id)]);
 
-          api<{
-            members: IncidentMember[];
-          }>(`/incidents/${id}/members`),
+        dispatch(setSelectedIncident(incidentResponse.incident));
 
-          api<{ tasks: Task[] }>(`/incidents/${id}/tasks`),
-        ]);
+        dispatch(setIncidentMembers(memberResponse));
 
-        setIncident(incidentResponse.incident);
-
-        setMembers(memberResponse.members);
-
-        setTasks(taskResponse.tasks);
+        setTasks(taskResponse);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Unable to load incident details");
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     }
 
@@ -105,6 +103,8 @@ export default function IncidentDetailsPage() {
             <p className="mt-1 text-sm text-[#9ca4b1]">{new Date(incident.created_at).toLocaleString()}</p>
           </div>
         </div>
+
+        {error && <div className="rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2.5 text-sm text-[#ff7b7b]">{error}</div>}
 
         <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
           <section className="rounded-xl border border-[#252b35] bg-[#0e1117] p-5">

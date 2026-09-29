@@ -4,7 +4,7 @@ import { SubmitEvent, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { api } from "@/lib/api";
+import { loginUser } from "@/api/auth.api";
 import { useAppDispatch } from "@/store/hooks";
 import { loginSuccess } from "@/store/slices/authSlice";
 
@@ -38,21 +38,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await api<LoginResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
+      const result = await loginUser({ email, password });
 
-      dispatch(
-        loginSuccess({
-          user: response.user,
-        }),
-      );
-
-      router.push("/dashboard");
+      dispatch(loginSuccess({ user: result.user }));
+      router.push("/incidents");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Unable to login");
     } finally {

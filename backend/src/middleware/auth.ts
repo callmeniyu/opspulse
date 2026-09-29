@@ -24,8 +24,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     .find((cookie) => cookie.startsWith("token="))
     ?.split("=")[1];
 
-  console.log("Token::", token);
-
   if (!token) {
     return res.status(401).json({
       message: "Invalid authentication token format ",
@@ -34,7 +32,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    console.log("User", payload);
 
     if (typeof payload === "string" || typeof payload.userId !== "string") {
       res.status(401).json({
