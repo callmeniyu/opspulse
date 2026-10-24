@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { createUser, findUserByEmail, findUserById } from "../repositories/user.repository.js";
 
 import type { RegisterInput, LoginInput } from "../validators/auth.validator.js";
+import { createAccessToken, createRefreshToken } from "../utils/tokens.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
 
@@ -22,7 +23,18 @@ export async function registerUser(input: RegisterInput) {
 
   const user = await createUser(input.name, input.email, passwordHash);
 
-  return user;
+  const accessToken = createAccessToken(user._id.toString());
+  const refreshToken = createRefreshToken(user._id.toString());
+
+  return {
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    },
+    accessToken,
+    refreshToken,
+  };
 }
 
 export async function loginUser(input: LoginInput) {
@@ -31,13 +43,14 @@ export async function loginUser(input: LoginInput) {
   if (!user) {
     throw new Error("Invalid email or password");
   }
+
   const passwordMatches = await bcrypt.compare(input.password, user.password_hash);
 
   if (!passwordMatches) {
     throw new Error("Invalid email or password");
   }
 
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1d" });
+  const token = createAccessToken(user.id);
 
   return {
     user: {
@@ -48,3 +61,5 @@ export async function loginUser(input: LoginInput) {
     token,
   };
 }
+
+export async function refreshToken(token: string) {}

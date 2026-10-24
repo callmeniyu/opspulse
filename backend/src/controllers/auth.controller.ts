@@ -24,14 +24,14 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
     const result = await loginUser(input);
 
-    res.cookie("token", result.token, {
+    res.cookie("refresh-token", result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json(result);
+    res.status(200).json({ user: result.user });
   } catch (error) {
     next(error);
   }
@@ -54,3 +54,5 @@ export async function getCurrentUser(req: Request, res: Response, next: NextFunc
     next(error);
   }
 }
+
+export const refresh = async (req: Request, res: Response, next: NextFunction) => {};
