@@ -26,7 +26,7 @@ export async function list(req: Request<{ incidentId: string }, {}, {}>, res: Re
     }
 
     const { incidentId } = req.params;
-    const tasks = await taskService.list(incidentId);
+    const tasks = await taskService.list(incidentId, req.user.id);
     res.json({ tasks });
   } catch (error) {
     next(error);
@@ -41,6 +41,19 @@ export async function update(req: Request<{ taskId: string }, {}, UpdateTaskInpu
     const { taskId } = req.params;
     const input = updateTaskSchema.parse(req.body);
     const task = await taskService.update(taskId, input);
+    res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function remove(req: Request<{ taskId: string }, {}, {}>, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { taskId } = req.params;
+    const task = await taskService.remove(taskId);
     res.json({ task });
   } catch (error) {
     next(error);

@@ -81,7 +81,12 @@ export const refresh = async (req: Request, res: Response) => {
     }
 
     const payload = verifyRefreshToken(refreshToken);
-    const accessToken = createAccessToken(payload.userId);
+    if (!payload.sub) {
+      res.status(401).json({ message: "Invalid or expired refresh token" });
+      return;
+    }
+
+    const accessToken = createAccessToken(payload.sub);
 
     res.status(200).json({ accessToken });
   } catch {

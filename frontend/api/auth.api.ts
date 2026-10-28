@@ -36,3 +36,21 @@ export function registerUser(credentials: RegisterRequest): Promise<RegisterResp
     body: JSON.stringify(credentials),
   });
 }
+
+export async function logoutUser() {
+  return apiFetch<{ message: string }>("/auth/logout", {
+    method: "GET",
+  });
+}
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  try {
+    const response = await apiFetch<{ user: AuthUser }>("/auth/me", {
+      method: "GET",
+    });
+    return response.user;
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return null;
+  }
+}

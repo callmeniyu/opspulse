@@ -17,11 +17,10 @@ import { Loading } from "@/components/ui/Loading";
 import { getIncidentById } from "@/api/incident.api";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { setLoading, setSelectedIncident, setIncidentMembers } from "@/store/slices/incidentSlice";
-import type { Incident } from "@/types/incidentTypes";
-import type { IncidentMember } from "@/types/memberTypes";
 import type { Task } from "@/types/taskTypes";
 import { getMembersByIncidentId } from "@/api/member.api";
 import { getTasksByIncidentId } from "@/api/tasks.api";
+import { ArrowLeft } from "lucide-react";
 
 export default function IncidentDetailsPage() {
   const params = useParams();
@@ -79,8 +78,9 @@ export default function IncidentDetailsPage() {
     <AppShell>
       <div className="mx-auto max-w-[1400px] p-5 sm:p-8">
         <div className="mb-7">
-          <a href="/incidents" className="text-xs text-[#68717f] hover:text-[#dce0e5]">
-            ← Incidents
+          <a href="/incidents" className="text-lg text-[#68717f] hover:text-[#dce0e5]">
+            <ArrowLeft className="inline-block mr-2" />
+            Incidents
           </a>
         </div>
 

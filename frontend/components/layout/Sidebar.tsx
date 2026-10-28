@@ -17,13 +17,13 @@ const navigation = [
     icon: AlertTriangle,
   },
   {
-    label: "Tasks",
-    href: "/dashboard?view=tasks",
+    label: "MyTasks",
+    href: "/tasks",
     icon: CheckSquare,
   },
   {
-    label: "Team",
-    href: "/dashboard?view=team",
+    label: "MyTeam",
+    href: "/team",
     icon: Users,
   },
 ];

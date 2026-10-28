@@ -30,7 +30,7 @@ export async function list(req: Request<{ incidentId: string }>, res: Response, 
     }
     const { incidentId } = req.params;
 
-    const result = await incidentMemberService.list(incidentId);
+    const result = await incidentMemberService.list(incidentId, req.user.id);
 
     return res.status(200).json({ members: result });
   } catch (error) {

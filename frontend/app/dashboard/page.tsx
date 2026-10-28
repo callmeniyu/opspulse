@@ -16,6 +16,7 @@ import { useAppDispatch } from "@/store/hooks";
 
 export default function DashboardPage() {
   const { loading, items: incidents } = useAppSelector((state) => state.incidents);
+  const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function DashboardPage() {
           <div>
             <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-[#68717f]">Operations overview</p>
 
-            <h1 className="text-2xl font-semibold tracking-tight">Good afternoon, Nick.</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Good afternoon, {user?.name || "User"}.</h1>
 
             <p className="mt-1 text-sm text-[#68717f]">Here&apos;s what&apos;s happening across your incidents.</p>
           </div>
@@ -118,15 +119,19 @@ export default function DashboardPage() {
 
           <section className="rounded-xl border border-[#252b35] bg-[#0e1117] p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">My tasks</h2>
-
-              <span className="text-xs text-[#505865]">3 open</span>
+              <div>
+                <h2 className="text-sm font-semibold">My tasks</h2>
+                <p className="mt-1 text-xs text-[#505865]">Tasks assigned to you</p>
+              </div>
+              <Link href="/tasks" className="text-xs font-medium text-[#a4b0ff] hover:text-[#c0c8ff]">
+                Open task queue →
+              </Link>
             </div>
-
-            <div className="mt-5 space-y-1">
-              <TaskPreview text="Check payment API logs" />
-              <TaskPreview text="Review latest deployment" />
-              <TaskPreview text="Verify database metrics" />
+            <div className="mt-5 rounded-lg border border-[#252b35] bg-[#0b0e13] px-4 py-5">
+              <p className="text-sm text-[#9ca4b1]">View your assigned tasks across incidents.</p>
+              <Link href="/tasks" className="mt-3 inline-block text-xs font-medium text-[#a4b0ff] hover:text-[#c0c8ff]">
+                Go to My Tasks →
+              </Link>
             </div>
           </section>
         </div>

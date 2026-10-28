@@ -4,12 +4,16 @@ import { Search } from "lucide-react";
 
 import { useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
+import { logoutUser } from "@/api/auth.api";
 
 export function Topbar() {
   const dispatch = useAppDispatch();
 
-  function handleLogout() {
+  async function handleLogout() {
+    await logoutUser();
+
     dispatch(logout());
+
     window.location.href = "/login";
   }
 

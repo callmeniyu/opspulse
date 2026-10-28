@@ -66,3 +66,15 @@ export async function updateTask(id: string, title: string | undefined, descript
 
   return result.rows[0] ?? null;
 }
+
+export async function deleteTask(id: string) {
+  const result = await pool.query(
+    `
+      DELETE FROM tasks
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id],
+  );
+  return result.rows[0] ?? null;
+}

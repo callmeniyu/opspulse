@@ -24,7 +24,12 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const payload = verifyAccessToken(accessToken);
 
-    req.user = { id: payload.userId };
+    if (!payload.sub) {
+      res.status(401).json({ message: "Invalid or expired access token" });
+      return;
+    }
+
+    req.user = { id: payload.sub };
     next();
   } catch {
     res.status(401).json({ message: "Invalid or expired access token" });

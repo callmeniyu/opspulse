@@ -1,4 +1,4 @@
-import { addMember, findMembers, removeMember } from "../repositories/incident-member.repository.js";
+import { addMember, findMembers, removeMember,isIncidentMember } from "../repositories/incident-member.repository.js";
 
 import { findIncidentById } from "../repositories/incident.repository.js";
 import type { IncidentMemberRole } from "../types/incidentMemberTypes.js";
@@ -19,8 +19,20 @@ export async function add(incidentId: string, input: AddMemberInput, currentUser
   return await addMember(incidentId, input.userId, input.role);
 }
 
-export async function list(incidentId: string) {
-  return await findMembers(incidentId);
+export async function list(incidentId: string, currentUserId: string) {
+  const incident = await findIncidentById(incidentId);
+
+  if (!incident) {
+    throw new Error("Incident not found");
+  }
+
+  const isMember = await isIncidentMember(incidentId, currentUserId);
+
+  if (!isMember) {
+    throw new Error("You do not have access to this incident");
+  }
+
+  return findMembers(incidentId);
 }
 
 export async function remove(incidentId: string, userId: string, currentUserId: string) {

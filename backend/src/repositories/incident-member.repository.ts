@@ -50,3 +50,18 @@ export async function removeMember(incidentId: string, userId: string) {
   );
   return result.rows[0];
 }
+
+export async function isIncidentMember(incidentId: string, userId: string): Promise<boolean> {
+  const result = await pool.query(
+    `
+      SELECT 1
+      FROM incident_members
+      WHERE incident_id = $1
+        AND user_id = $2
+      LIMIT 1
+    `,
+    [incidentId, userId],
+  );
+
+  return result.rowCount !== null && result.rowCount > 0;
+}
