@@ -1,14 +1,9 @@
 // frontend/api/auth.api.ts
+import { User } from "../../backend/src/types/UserTypes";
 import { apiFetch } from "../lib/apiFetch";
 
-export type AuthUser = {
-  id: string;
-  email: string;
-  name: string;
-};
-
 export type LoginResponse = {
-  user: AuthUser;
+  user: User;
   accessToken: string;
 };
 
@@ -19,7 +14,7 @@ export type RegisterRequest = {
 };
 
 export type RegisterResponse = {
-  user: AuthUser;
+  user: User;
 };
 
 export async function loginUser(credentials: { email: string; password: string }) {
@@ -43,9 +38,9 @@ export async function logoutUser() {
   });
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export async function getCurrentUser(): Promise<User | null> {
   try {
-    const response = await apiFetch<{ user: AuthUser }>("/auth/me", {
+    const response = await apiFetch<{ user: User }>("/auth/me", {
       method: "GET",
     });
     return response.user;
