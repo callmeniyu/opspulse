@@ -1,14 +1,16 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { User } from "../../../backend/src/types/UserTypes";
 
 type AuthState = {
   user: User | null;
   isAuthenticated: boolean;
+  initialized: boolean;
 };
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
+  initialized: false,
 };
 
 const authSlice = createSlice({
@@ -27,6 +29,20 @@ const authSlice = createSlice({
     ) => {
       state.user = action.payload.user;
       state.isAuthenticated = true;
+      state.initialized = true;
+    },
+
+    initializeAuth: (
+      state,
+      action: {
+        payload: {
+          user: User | null;
+        };
+      },
+    ) => {
+      state.user = action.payload.user;
+      state.isAuthenticated = Boolean(action.payload.user);
+      state.initialized = true;
     },
 
     logout: (state) => {
@@ -36,6 +52,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, initializeAuth, logout } = authSlice.actions;
 
 export default authSlice.reducer;

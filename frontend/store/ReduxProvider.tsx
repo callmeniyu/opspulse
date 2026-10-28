@@ -2,11 +2,12 @@
 
 import { Provider } from "react-redux";
 import { store } from "./store";
+import AuthBootstrap from "./AuthBootstrap";
 
-type Props = {
-  children: React.ReactNode;
-};
-
-export default function ReduxProvider({ children }: Props) {
-  return <Provider store={store}>{children}</Provider>;
+export default function ReduxProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <Provider store={store}>
+      <AuthBootstrap>{children}</AuthBootstrap>
+    </Provider>
+  );
 }

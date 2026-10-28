@@ -2,11 +2,13 @@
 
 import { Search } from "lucide-react";
 
+import { useAppSelector } from "@/store/hooks";
 import { useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
 import { logoutUser } from "@/api/auth.api";
 
 export function Topbar() {
+  const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
 
   async function handleLogout() {
@@ -29,7 +31,7 @@ export function Topbar() {
         <button onClick={handleLogout} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-[#9ca4b1] hover:bg-[#141820] hover:text-[#f1f3f5]">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#252b35] text-xs font-semibold">N</span>
 
-          <span className="hidden sm:block">Nick</span>
+          <span className="hidden sm:block">{user?.name}</span>
         </button>
       </div>
     </header>
