@@ -13,5 +13,7 @@ CREATE TABLE tasks (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL
 );

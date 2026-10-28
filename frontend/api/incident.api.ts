@@ -1,24 +1,31 @@
 import { Incident, UpdateIncidentInput } from "@/types/incidentTypes";
-import { apiClient } from "@/lib/apiClient";
+import { apiFetch } from "@/lib/apiFetch";
 
 export function getIncidents() {
-  return apiClient<{ incidents: Incident[] }>("/incidents");
+  return apiFetch<{ incidents: Incident[] }>("/incidents");
 }
 
 export function getIncidentById(id: string) {
-  return apiClient<{ incident: Incident }>(`/incidents/${id}`);
+  return apiFetch<{ incident: Incident }>(`/incidents/${id}`);
 }
 
 export function createIncident(data: { title: string; description?: string; severity: Incident["severity"] }) {
-  return apiClient<{ incident: Incident }>("/incidents", {
+  return apiFetch<{ incident: Incident }>("/incidents", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
 export function updateIncident(id: string, data: UpdateIncidentInput) {
-  return apiClient<{ incident: Incident }>(`/incidents/${id}`, {
-    method: "PATCH",
+  return apiFetch<{ incident: Incident }>(`/incidents/${id}`, {
+    method: "PUT",
     body: JSON.stringify(data),
+  });
+}
+
+export function changeIncidentStatus(id: string, status: Incident["status"]) {
+  return apiFetch<{ incident: Incident }>(`/incidents/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   });
 }

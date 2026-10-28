@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt, { type JwtPayload } from "jsonwebtoken";
+import { verifyAccessToken } from "../utils/tokens.js";
 
 declare global {
   namespace Express {
@@ -11,44 +11,22 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not configured");
-}
-
 export function authenticate(req: Request, res: Response, next: NextFunction) {
-  const cookies = req.headers.cookie || "";
-  const token = cookies
-    .split("; ")
-    .find((cookie) => cookie.startsWith("token="))
-    ?.split("=")[1];
+  const authorization = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({
-      message: "Invalid authentication token format ",
-    });
+  if (!authorization?.startsWith("Bearer ")) {
+    res.status(401).json({ message: "Access token required" });
+    return;
   }
 
+  const accessToken = authorization.slice("Bearer ".length);
+
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = verifyAccessToken(accessToken);
 
-    if (typeof payload === "string" || typeof payload.userId !== "string") {
-      res.status(401).json({
-        message: "Invalid token",
-      });
-
-      return;
-    }
-
-    req.user = {
-      id: payload.userId,
-    };
-
+    req.user = { id: payload.userId };
     next();
   } catch {
-    res.status(401).json({
-      message: "Invalid or expired token",
-    });
+    res.status(401).json({ message: "Invalid or expired access token" });
   }
 }

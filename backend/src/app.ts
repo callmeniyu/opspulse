@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import incidentRoutes from "./routes/incident.routes.js";
@@ -18,6 +20,7 @@ app.use(
   }),
 );
 
+app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api/health", healthRoutes);

@@ -1,17 +1,37 @@
-import { apiClient } from "@/lib/apiClient";
-import { User } from "../../backend/src/types/UserTypes";
+// frontend/api/auth.api.ts
+import { apiFetch } from "../lib/apiFetch";
 
-export type LoginRequest = {
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+export type LoginResponse = {
+  user: AuthUser;
+  accessToken: string;
+};
+
+export type RegisterRequest = {
+  name: string;
   email: string;
   password: string;
 };
 
-export type LoginResponse = {
-  user: User;
+export type RegisterResponse = {
+  user: AuthUser;
 };
 
-export function loginUser(credentials: LoginRequest): Promise<LoginResponse> {
-  return apiClient<LoginResponse>("/auth/login", {
+export async function loginUser(credentials: { email: string; password: string }) {
+  return apiFetch<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+    skipRefresh: true,
+  });
+}
+
+export function registerUser(credentials: RegisterRequest): Promise<RegisterResponse> {
+  return apiFetch<RegisterResponse>("/auth/register", {
     method: "POST",
     body: JSON.stringify(credentials),
   });

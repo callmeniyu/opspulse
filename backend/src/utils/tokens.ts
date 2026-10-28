@@ -1,22 +1,44 @@
-import jwt from "jsonwebtoken";
-import type { StringValue } from "ms";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 
-export const createAccessToken = (userId: string) => {
-  const secret = process.env.JWT_ACCESS_SECRET || "default_secret_key";
-  const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || "15m") as StringValue;
-  return jwt.sign({ userId }, secret, { expiresIn });
-};
+const ACCESS_TOKEN_TTL = "15m";
+const REFRESH_TOKEN_TTL = "7d";
 
-export const createRefreshToken = (userId: string) => {
-  const secret = process.env.JWT_REFRESH_SECRET || "default_secret_key";
-  const expiresIn = (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as StringValue;
-  return jwt.sign({ userId }, secret, { expiresIn });
-};
+function getAccessSecret(): string {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) throw new Error("JWT_ACCESS_SECRET is not configured");
+  return secret;
+}
 
-export const verifyAccessToken = (token: string) => {
-  return jwt.verify(token, process.env.JWT_ACCESS_SECRET || "default_secret_key");
-};
+function getRefreshSecret(): string {
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (!secret) throw new Error("JWT_REFRESH_SECRET is not configured");
+  return secret;
+}
 
-export const verifyRefreshToken = (token: string) => {
-  return jwt.verify(token, process.env.JWT_REFRESH_SECRET || "default_secret_key");
-};
+export function createAccessToken(userId: string): string {
+  return jwt.sign({ sub: userId, type: "access" }, getAccessSecret(), { expiresIn: ACCESS_TOKEN_TTL });
+}
+
+export function createRefreshToken(userId: string): string {
+  return jwt.sign({ sub: userId, type: "refresh" }, getRefreshSecret(), { expiresIn: REFRESH_TOKEN_TTL });
+}
+
+export function verifyAccessToken(token: string): JwtPayload {
+  const payload = jwt.verify(token, getAccessSecret());
+
+  if (typeof payload === "string" || payload.type !== "access" || typeof payload.sub !== "string") {
+    throw new Error("Invalid access token");
+  }
+
+  return payload;
+}
+
+export function verifyRefreshToken(token: string): JwtPayload {
+  const payload = jwt.verify(token, getRefreshSecret());
+
+  if (typeof payload === "string" || payload.type !== "refresh" || typeof payload.sub !== "string") {
+    throw new Error("Invalid refresh token");
+  }
+
+  return payload;
+}

@@ -1,18 +1,19 @@
 import { pool } from "../db/client.js";
 
-export async function createTask(incidentId: string, title: string, description: string | undefined, assignedTo?: string) {
+export async function createTask(incidentId: string, title: string, description: string | undefined, createdBy: string, assignedTo?: string) {
   const result = await pool.query(
     `
       INSERT INTO tasks (
         incident_id,
         title,
         description,
-        assigned_to
+        assigned_to,
+        created_by
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `,
-    [incidentId, title, description ?? null, assignedTo ?? null],
+    [incidentId, title, description ?? null, assignedTo ?? null, createdBy],
   );
 
   return result.rows[0];

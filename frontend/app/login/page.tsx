@@ -3,6 +3,7 @@
 import { SubmitEvent, useState } from "react";
 
 import { useRouter } from "next/navigation";
+import { setAccessToken } from "@/lib/authToken";
 
 import { loginUser } from "@/api/auth.api";
 import { useAppDispatch } from "@/store/hooks";
@@ -10,6 +11,7 @@ import { loginSuccess } from "@/store/slices/authSlice";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import Link from "next/link";
 
 interface LoginResponse {
   user: {
@@ -39,6 +41,10 @@ export default function LoginPage() {
 
     try {
       const result = await loginUser({ email, password });
+
+      setAccessToken(result.accessToken);
+
+      sessionStorage.setItem("accessToken", result.accessToken);
 
       dispatch(loginSuccess({ user: result.user }));
       router.push("/incidents");
@@ -75,6 +81,13 @@ export default function LoginPage() {
             </Button>
           </div>
         </form>
+
+        <p className="mt-6 text-center text-sm text-[#68717f]">
+          Don't have an account?{" "}
+          <Link href="/register" className="font-medium text-[#f1f3f5] transition-colors hover:text-white">
+            Create an account
+          </Link>
+        </p>
 
         <p className="mt-5 text-center text-xs text-[#505865]">OpsPulse · Incident response</p>
       </div>

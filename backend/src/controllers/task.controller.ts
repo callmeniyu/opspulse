@@ -11,7 +11,7 @@ export async function create(req: Request<{ incidentId: string }, {}, CreateTask
     const { incidentId } = req.params;
     const input = createTaskSchema.parse(req.body);
 
-    const task = await taskService.create(incidentId, input);
+    const task = await taskService.create(incidentId, input, req.user.id);
 
     res.status(201).json({ task });
   } catch (error) {

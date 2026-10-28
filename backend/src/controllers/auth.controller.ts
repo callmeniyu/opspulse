@@ -5,14 +5,21 @@ import { registerUser, loginUser } from "../services/auth.service.js";
 import { registerSchema, loginSchema } from "../validators/auth.validator.js";
 
 import { findUserById } from "../repositories/user.repository.js";
+import { refreshCookieOptions } from "../utils/refreshcookie.js";
+import { createAccessToken, verifyRefreshToken } from "../utils/tokens.js";
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
     const input = registerSchema.parse(req.body);
 
-    const user = await registerUser(input);
+    const result = await registerUser(input);
 
-    res.status(201).json({ user });
+    res.cookie("refreshToken", result.refreshToken, refreshCookieOptions);
+
+    res.status(201).json({
+      user: result.user,
+      accessToken: result.accessToken,
+    });
   } catch (error) {
     next(error);
   }
@@ -24,18 +31,27 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 
     const result = await loginUser(input);
 
-    res.cookie("refresh-token", result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", result.refreshToken, refreshCookieOptions);
 
-    res.status(200).json({ user: result.user });
+    res.status(200).json({
+      user: result.user,
+      accessToken: result.accessToken,
+    });
   } catch (error) {
     next(error);
   }
 }
+
+export const logout = (_req: Request, res: Response) => {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth",
+  });
+
+  res.status(200).json({ message: "Logged out" });
+};
 
 export async function getCurrentUser(req: Request, res: Response, next: NextFunction) {
   try {
@@ -55,4 +71,27 @@ export async function getCurrentUser(req: Request, res: Response, next: NextFunc
   }
 }
 
-export const refresh = async (req: Request, res: Response, next: NextFunction) => {};
+export const refresh = async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      res.status(401).json({ message: "Refresh token missing" });
+      return;
+    }
+
+    const payload = verifyRefreshToken(refreshToken);
+    const accessToken = createAccessToken(payload.userId);
+
+    res.status(200).json({ accessToken });
+  } catch {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/api/auth",
+    });
+
+    res.status(401).json({ message: "Invalid or expired refresh token" });
+  }
+};

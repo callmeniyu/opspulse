@@ -1,16 +1,9 @@
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 
 import { createUser, findUserByEmail, findUserById } from "../repositories/user.repository.js";
 
 import type { RegisterInput, LoginInput } from "../validators/auth.validator.js";
 import { createAccessToken, createRefreshToken } from "../utils/tokens.js";
-
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined in the environment variables");
-}
 
 export async function registerUser(input: RegisterInput) {
   const existingUser = await findUserByEmail(input.email);
@@ -23,8 +16,8 @@ export async function registerUser(input: RegisterInput) {
 
   const user = await createUser(input.name, input.email, passwordHash);
 
-  const accessToken = createAccessToken(user._id.toString());
-  const refreshToken = createRefreshToken(user._id.toString());
+  const accessToken = createAccessToken(user.id.toString());
+  const refreshToken = createRefreshToken(user.id.toString());
 
   return {
     user: {
@@ -50,7 +43,8 @@ export async function loginUser(input: LoginInput) {
     throw new Error("Invalid email or password");
   }
 
-  const token = createAccessToken(user.id);
+  const accessToken = createAccessToken(user.id);
+  const refreshToken = createRefreshToken(user.id);
 
   return {
     user: {
@@ -58,8 +52,7 @@ export async function loginUser(input: LoginInput) {
       name: user.name,
       email: user.email,
     },
-    token,
+    accessToken,
+    refreshToken,
   };
 }
-
-export async function refreshToken(token: string) {}
