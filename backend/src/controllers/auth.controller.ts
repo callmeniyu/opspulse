@@ -90,13 +90,6 @@ export const refresh = async (req: Request, res: Response) => {
 
     res.status(200).json({ accessToken });
   } catch {
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/api/auth",
-    });
-
     res.status(401).json({ message: "Invalid or expired refresh token" });
   }
 };

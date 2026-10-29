@@ -11,7 +11,6 @@ export async function add(req: Request<{ incidentId: string }>, res: Response, n
     }
     const { incidentId } = req.params;
     const { userId, role } = req.body;
-    console.log("Request Params: ", req.params);
 
     const input = addMemberSchema.parse({ userId, role });
 

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/incidents/886ed225-2e39-4f97-8702-38bc8e5459a4/members"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"userId\":\"34103885-80ec-4f83-b8a4-5eb11178f52b\",\r
+
+    \    \"role\":\"RESPONDER\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_130b}}"
+order: 1793252111883

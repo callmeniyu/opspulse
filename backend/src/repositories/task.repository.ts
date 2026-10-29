@@ -1,6 +1,7 @@
 import { pool } from "../db/client.js";
+import type { UpdateTaskInput } from "../validators/task.validator.js";
 
-export async function createTask(incidentId: string, title: string, description: string | undefined, createdBy: string, assignedTo?: string) {
+export async function createTask(incidentId: string, title: string, description: string | null | undefined, createdBy: string, assignedTo?: string | null | undefined) {
   const result = await pool.query(
     `
       INSERT INTO tasks (
@@ -24,23 +25,26 @@ export async function findTasks(incidentId: string) {
     `
       SELECT
         t.id,
+        t.incident_id,
         t.title,
         t.description,
         t.status,
         t.created_at,
         t.updated_at,
-
-        u.id AS assigned_user_id,
+        t.created_by,
+        t.assigned_to AS assigned_user_id,
         u.name AS assigned_user_name
-
       FROM tasks t
-
-      LEFT JOIN users u
-        ON u.id = t.assigned_to
-
+      LEFT JOIN users u ON u.id = t.assigned_to
       WHERE t.incident_id = $1
-
-      ORDER BY t.created_at ASC
+      ORDER BY
+        CASE t.status
+          WHEN 'IN_PROGRESS' THEN 0
+          WHEN 'TODO' THEN 1
+          WHEN 'COMPLETED' THEN 2
+          ELSE 3
+        END,
+        t.created_at DESC
     `,
     [incidentId],
   );
@@ -48,33 +52,65 @@ export async function findTasks(incidentId: string) {
   return result.rows;
 }
 
-export async function updateTask(id: string, title: string | undefined, description: string | undefined, assignedTo: string | null | undefined, status: string | undefined) {
+export async function findTaskById(taskId: string) {
   const result = await pool.query(
     `
-      UPDATE tasks
-      SET
-        title = COALESCE($2, title),
-        description = COALESCE($3, description),
-        assigned_to = COALESCE($4, assigned_to),
-        status = COALESCE($5, status),
-        updated_at = NOW()
+      SELECT
+        id,
+        incident_id,
+        title,
+        description,
+        status,
+        assigned_to,
+        created_by,
+        created_at,
+        updated_at
+      FROM tasks
       WHERE id = $1
-      RETURNING *
     `,
-    [id, title ?? null, description ?? null, assignedTo, status ?? null],
+    [taskId],
   );
 
   return result.rows[0] ?? null;
 }
 
-export async function deleteTask(id: string) {
+export async function updateTask(taskId: string, input: UpdateTaskInput) {
+  const result = await pool.query(
+    `
+      UPDATE tasks
+      SET
+        title = CASE WHEN $2::boolean THEN $3::varchar ELSE title END,
+        description = CASE WHEN $4::boolean THEN $5::text ELSE description END,
+        assigned_to = CASE WHEN $6::boolean THEN $7::uuid ELSE assigned_to END,
+        status = CASE WHEN $8::boolean THEN $9::varchar ELSE status END,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING
+        id,
+        incident_id,
+        title,
+        description,
+        status,
+        assigned_to,
+        created_by,
+        created_at,
+        updated_at
+    `,
+    [taskId, input.title !== undefined, input.title ?? null, input.description !== undefined, input.description ?? null, input.assignedTo !== undefined, input.assignedTo ?? null, input.status !== undefined, input.status ?? null],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function deleteTask(taskId: string) {
   const result = await pool.query(
     `
       DELETE FROM tasks
       WHERE id = $1
-      RETURNING *
+      RETURNING id, incident_id, title
     `,
-    [id],
+    [taskId],
   );
+
   return result.rows[0] ?? null;
 }

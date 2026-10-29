@@ -40,7 +40,7 @@ export async function update(req: Request<{ taskId: string }, {}, UpdateTaskInpu
     }
     const { taskId } = req.params;
     const input = updateTaskSchema.parse(req.body);
-    const task = await taskService.update(taskId, input);
+    const task = await taskService.update(taskId, input, req.user.id);
     res.json({ task });
   } catch (error) {
     next(error);
@@ -53,7 +53,7 @@ export async function remove(req: Request<{ taskId: string }, {}, {}>, res: Resp
       return res.status(401).json({ message: "Unauthorized" });
     }
     const { taskId } = req.params;
-    const task = await taskService.remove(taskId);
+    const task = await taskService.remove(taskId, req.user.id);
     res.json({ task });
   } catch (error) {
     next(error);

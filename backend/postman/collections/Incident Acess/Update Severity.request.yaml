@@ -1,0 +1,12 @@
+$kind: http-request
+description: ""
+url: "{{base_url}}/api/incidents/691bd400-0747-4c49-8bcb-feeccddbfef0"
+method: PUT
+body:
+  type: json
+  content: "{\r\n    \"severity\":\"SEV3\"\r\n}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_130b}}"
+order: 81125198573961

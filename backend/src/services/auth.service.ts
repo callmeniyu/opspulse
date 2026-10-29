@@ -5,11 +5,13 @@ import { createUser, findUserByEmail, findUserById } from "../repositories/user.
 import type { RegisterInput, LoginInput } from "../validators/auth.validator.js";
 import { createAccessToken, createRefreshToken } from "../utils/tokens.js";
 
+import { HttpError } from "../utils/HttpError.js";
+
 export async function registerUser(input: RegisterInput) {
   const existingUser = await findUserByEmail(input.email);
 
   if (existingUser) {
-    throw new Error("Email already registered");
+    throw new HttpError(409, "Email already registered");
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
@@ -21,7 +23,7 @@ export async function registerUser(input: RegisterInput) {
 
   return {
     user: {
-      id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
     },
@@ -34,13 +36,13 @@ export async function loginUser(input: LoginInput) {
   const user = await findUserByEmail(input.email);
 
   if (!user) {
-    throw new Error("Invalid email or password");
+    throw new HttpError(401, "Invalid email or password");
   }
 
   const passwordMatches = await bcrypt.compare(input.password, user.password_hash);
 
   if (!passwordMatches) {
-    throw new Error("Invalid email or password");
+    throw new HttpError(401, "Invalid email or password");
   }
 
   const accessToken = createAccessToken(user.id);
