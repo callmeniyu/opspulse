@@ -31,7 +31,11 @@ export async function list(req: Request, res: Response, next: NextFunction) {
 
 export async function getById(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
-    const incident = await incidentService.getById(req.params.id);
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const incident = await incidentService.getById(req.params.id, req.user.id);
     return res.json({ incident });
   } catch (error) {
     next(error);
@@ -41,7 +45,12 @@ export async function getById(req: Request<{ id: string }>, res: Response, next:
 export async function update(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
     const input = updateIncidentSchema.parse(req.body);
-    const incident = await incidentService.update(req.params.id, input);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const incident = await incidentService.update(req.params.id, input, req.user.id);
     return res.json({ incident });
   } catch (error) {
     next(error);
@@ -51,7 +60,12 @@ export async function update(req: Request<{ id: string }>, res: Response, next: 
 export async function changeStatus(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try {
     const input = updateIncidentStatusSchema.parse(req.body);
-    const incident = await incidentService.changeStatus(req.params.id, input);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const incident = await incidentService.changeStatus(req.params.id, input, req.user.id);
     return res.json({ incident });
   } catch (error) {
     next(error);

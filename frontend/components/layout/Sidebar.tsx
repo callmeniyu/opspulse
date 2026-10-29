@@ -28,11 +28,15 @@ const navigation = [
   },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  fixed?: boolean;
+};
+
+export function Sidebar({ fixed = true }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-[#1b2028] bg-[#0b0e13] md:flex md:flex-col">
+    <aside className={`hidden h-screen w-60 shrink-0 border-r border-[#1b2028] bg-[#0b0e13] md:flex md:flex-col ${fixed ? "fixed inset-y-0 left-0 z-20" : "h-full"}`}>
       <div className="flex h-16 items-center border-b border-[#1b2028] px-5">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#f1f3f5] text-xs font-bold text-[#090b0f]">O</div>

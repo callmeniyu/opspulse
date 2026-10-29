@@ -12,6 +12,8 @@ export interface Incident {
   creator_name?: string;
   created_at: string;
   updated_at?: string;
+  current_user_role?: "OWNER" | "RESPONDER" | "VIEWER";
+  resolved_at?: string | null;
 }
 
 export interface CreateIncidentInput {

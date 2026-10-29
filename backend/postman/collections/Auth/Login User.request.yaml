@@ -8,8 +8,8 @@ body:
   type: json
   content: |-
     {
-      "email": "testuser@example.com",
-      "password": "password123"
+      "email": "testuser10@gmail.com",
+      "password": "testuser10@gmail.com"
     }
 scripts:
   - type: afterResponse
