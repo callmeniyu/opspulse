@@ -24,6 +24,6 @@ export interface CreateIncidentInput {
 
 export interface UpdateIncidentInput {
   title?: string;
-  description?: string;
+  description?: string | null;
   severity?: IncidentSeverity;
 }

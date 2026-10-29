@@ -18,6 +18,10 @@ import type { Incident } from "@/types/incidentTypes";
 import type { IncidentMember } from "@/types/memberTypes";
 import type { Task } from "@/types/taskTypes";
 
+import { TaskList } from "@/components/tasks/TaskList";
+import { MemberList } from "@/components/members/MemberList";
+import { IncidentManagementControls } from "@/components/incidents/IncidentManagementControls";
+
 type WorkspaceTab = "activity" | "conversation";
 
 export default function IncidentDetailsPage() {
@@ -75,6 +79,39 @@ export default function IncidentDetailsPage() {
 
     setLoading(false);
     setRefreshing(false);
+  }
+
+  async function refreshTasks() {
+    try {
+      const updatedTasks = await getTasksByIncidentId(incidentId);
+      setTasks(updatedTasks);
+      setTasksError(null);
+    } catch (error) {
+      setTasksError(error instanceof Error ? error.message : "Unable to refresh tasks.");
+      throw error;
+    }
+  }
+
+  async function refreshMembersAndTasks() {
+    const [membersResult, tasksResult] = await Promise.allSettled([getMembersByIncidentId(incidentId), getTasksByIncidentId(incidentId)]);
+
+    if (membersResult.status === "fulfilled") {
+      setMembers(membersResult.value);
+      setMembersError(null);
+    } else {
+      setMembersError(membersResult.reason instanceof Error ? membersResult.reason.message : "Unable to refresh responders.");
+    }
+
+    if (tasksResult.status === "fulfilled") {
+      setTasks(tasksResult.value);
+      setTasksError(null);
+    } else {
+      setTasksError(tasksResult.reason instanceof Error ? tasksResult.reason.message : "Unable to refresh tasks.");
+    }
+
+    if (membersResult.status === "rejected" || tasksResult.status === "rejected") {
+      throw new Error("Some incident workspace data could not be refreshed.");
+    }
   }
 
   useEffect(() => {
@@ -200,6 +237,8 @@ export default function IncidentDetailsPage() {
 
               <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-[#8993a1]">{incident.description?.trim() || "No incident description has been provided."}</p>
 
+              <IncidentManagementControls incident={incident} canEditDetails={incident.current_user_role === "OWNER"} canChangeStatus={incident.current_user_role === "OWNER" || incident.current_user_role === "RESPONDER"} onIncidentChanged={() => loadWorkspace(true)} />
+
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[#68717f]">
                 <span>Created {new Date(incident.created_at).toLocaleString()}</span>
                 {incident.creator_name && <span>Owner: {incident.creator_name}</span>}
@@ -263,62 +302,30 @@ export default function IncidentDetailsPage() {
 
           {/* Operational side panels */}
           <aside className="min-w-0 space-y-5">
-            <section id="response-tasks" className="scroll-mt-6 rounded-xl border border-[#252b35] bg-[#0e1117]">
-              <div className="border-b border-[#252b35] p-4">
-                <SectionHeading icon={<ListTodo size={15} />} title="Response tasks" subtitle="Actions tracked for this incident" trailing={`${tasks.length}`} />
-              </div>
-
+            <section id="response-tasks" className="scroll-mt-6 rounded-xl border border-[#252b35] bg-[#0e1117] p-4">
               {tasksError ? (
-                <PanelError message={tasksError} onRetry={() => void loadWorkspace(true)} />
-              ) : tasks.length === 0 ? (
-                <EmptyPanel icon={<ListTodo size={17} />} title="No response tasks" description="Create actionable tasks here once task management controls are enabled." />
-              ) : (
-                <div className="divide-y divide-[#1b2028]">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="flex gap-3 px-4 py-3.5">
-                      <TaskStatusIcon status={task.status} />
-                      <div className="min-w-0 flex-1">
-                        <p className={`break-words text-sm ${task.status === "COMPLETED" ? "text-[#68717f] line-through" : "text-[#dce0e5]"}`}>{task.title}</p>
-                        <p className="mt-1 text-xs text-[#68717f]">{task.assigned_user_name ?? "Unassigned"}</p>
-                        <p className="mt-1 text-[10px] uppercase tracking-wider text-[#68717f]">{formatLabel(task.status)}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div role="alert" className="text-sm text-[#ff8585]">
+                  <p>{tasksError}</p>
+                  <button type="button" onClick={() => void refreshTasks().catch(() => undefined)} className="mt-2 underline underline-offset-4">
+                    Retry
+                  </button>
                 </div>
+              ) : (
+                <TaskList incidentId={incidentId} tasks={tasks} members={members} canManage={incident.current_user_role === "OWNER" || incident.current_user_role === "RESPONDER"} onTasksChanged={refreshTasks} />
               )}
-
-              <div className="border-t border-[#252b35] p-3">
-                <p className="text-xs leading-5 text-[#68717f]">Task creation, assignment, status changes, and deletion will be connected after the mutation endpoints are permission-checked.</p>
-              </div>
             </section>
 
-            <section id="responders" className="scroll-mt-6 rounded-xl border border-[#252b35] bg-[#0e1117]">
-              <div className="border-b border-[#252b35] p-4">
-                <SectionHeading icon={<Users size={15} />} title="Responders" subtitle="People assigned to this incident" trailing={`${members.length}`} />
-              </div>
-
+            <section id="responders" className="scroll-mt-6 rounded-xl border border-[#252b35] bg-[#0e1117] p-4">
               {membersError ? (
-                <PanelError message={membersError} onRetry={() => void loadWorkspace(true)} />
-              ) : members.length === 0 ? (
-                <EmptyPanel icon={<Users size={17} />} title="No responders found" description="Incident members will appear here when membership data is available." />
-              ) : (
-                <div className="divide-y divide-[#1b2028]">
-                  {members.map((member) => (
-                    <div key={member.id} className="flex items-center gap-3 px-4 py-3.5">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#343b46] bg-[#1a202a] text-xs font-semibold text-[#dce0e5]">{member.name.slice(0, 1).toUpperCase()}</div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-[#dce0e5]">{member.name}</p>
-                        <p className="truncate text-xs text-[#68717f]">{member.email}</p>
-                      </div>
-                      <span className="shrink-0 rounded-md border border-[#343b46] px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-[#8993a1]">{formatLabel(member.role)}</span>
-                    </div>
-                  ))}
+                <div role="alert" className="text-sm text-[#ff8585]">
+                  <p>{membersError}</p>
+                  <button type="button" onClick={() => void refreshMembersAndTasks().catch(() => undefined)} className="mt-2 underline underline-offset-4">
+                    Retry
+                  </button>
                 </div>
+              ) : (
+                <MemberList incidentId={incidentId} members={members} incidentOwnerId={incident.created_by} canManage={incident.current_user_role === "OWNER"} onMembersChanged={refreshMembersAndTasks} />
               )}
-
-              <div className="border-t border-[#252b35] p-3">
-                <p className="text-xs leading-5 text-[#68717f]">Adding and removing responders will be enabled after owner permissions and registered-user lookup are finalized.</p>
-              </div>
             </section>
 
             <section id="resolution" className="scroll-mt-6 rounded-xl border border-[#252b35] bg-[#0e1117] p-4">

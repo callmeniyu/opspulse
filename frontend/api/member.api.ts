@@ -1,7 +1,24 @@
 import { apiFetch } from "@/lib/apiFetch";
-import { IncidentMember } from "@/types/memberTypes";
+import { IncidentMember, IncidentMemberRole } from "@/types/memberTypes";
 
-export async function addMemberToIncident(incidentId: string, memberData: IncidentMember) {
+export interface MemberCandidate {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface AddIncidentMemberInput {
+  userId: string;
+  role: Extract<IncidentMemberRole, "RESPONDER" | "VIEWER">;
+}
+
+export async function findMemberCandidate(incidentId: string, email: string): Promise<MemberCandidate> {
+  const response = await apiFetch<{ user: MemberCandidate }>(`/incidents/${incidentId}/member-candidates?email=${encodeURIComponent(email.trim())}`);
+
+  return response.user;
+}
+
+export async function addMemberToIncident(incidentId: string, memberData: AddIncidentMemberInput) {
   const response = await apiFetch<{ member: IncidentMember }>(`/incidents/${incidentId}/members`, {
     method: "POST",
     body: JSON.stringify(memberData),

@@ -8,13 +8,15 @@ export const createIncidentSchema = z.object({
   severity: z.enum(["SEV1", "SEV2", "SEV3", "SEV4"]),
 });
 
-export const updateIncidentSchema = z.object({
-  title: z.string().min(3).max(255).optional(),
-
-  description: z.string().max(5000).optional(),
-
-  severity: z.enum(["SEV1", "SEV2", "SEV3", "SEV4"]).optional(),
-});
+export const updateIncidentSchema = z
+  .object({
+    title: z.string().trim().min(3).max(255).optional(),
+    description: z.string().max(5000).nullable().optional(),
+    severity: z.enum(["SEV1", "SEV2", "SEV3", "SEV4"]).optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "Provide at least one field to update",
+  });
 
 export const updateIncidentStatusSchema = z.object({
   status: z.enum(["OPEN", "INVESTIGATING", "MITIGATED", "RESOLVED"]),

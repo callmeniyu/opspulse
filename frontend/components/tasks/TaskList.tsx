@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import { createTask, deleteTask, updateTask } from "@/api/tasks.api";
 import type { IncidentMember } from "@/types/memberTypes";
 import type { Task, TaskStatus } from "@/types/taskTypes";
@@ -28,7 +28,18 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
   const completedCount = tasks.filter((task) => task.status === "COMPLETED").length;
+
+  function startEditing(task: Task) {
+    setEditingTaskId(task.id);
+    setEditTitle(task.title);
+    setEditDescription(task.description ?? "");
+    setError(null);
+  }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +67,30 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
       setError(err instanceof Error ? err.message : "Unable to create task.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleSaveEdit(task: Task) {
+    if (editTitle.trim().length < 3) {
+      setError("Task title must contain at least 3 characters.");
+      return;
+    }
+
+    setError(null);
+    setPendingTaskId(task.id);
+
+    try {
+      await updateTask(task.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+      });
+
+      setEditingTaskId(null);
+      await onTasksChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to edit task.");
+    } finally {
+      setPendingTaskId(null);
     }
   }
 
