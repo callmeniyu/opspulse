@@ -93,19 +93,19 @@ export async function findIncidentById(id: string) {
   return result.rows[0] ?? null;
 }
 
-export async function updateIncident(id: string, title: string | undefined, description: string | undefined, severity: string | undefined) {
+export async function updateIncident(id: string, title: string | undefined, description: string | null | undefined, severity: string | undefined) {
   const result = await pool.query(
     `
-            UPDATE incidents
-            SET
-                title = COALESCE($2, title),
-                description = COALESCE($3, description),
-                severity = COALESCE($4, severity),
-                updated_at = NOW()
-            WHERE id = $1
-            RETURNING *
-        `,
-    [id, title ?? null, description ?? null, severity ?? null],
+      UPDATE incidents
+      SET
+        title = CASE WHEN $2::boolean THEN $3::varchar ELSE title END,
+        description = CASE WHEN $4::boolean THEN $5::text ELSE description END,
+        severity = CASE WHEN $6::boolean THEN $7::varchar ELSE severity END,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, title !== undefined, title ?? null, description !== undefined, description ?? null, severity !== undefined, severity ?? null],
   );
 
   return result.rows[0] ?? null;
@@ -117,6 +117,10 @@ export async function updateIncidentStatus(id: string, status: string) {
       UPDATE incidents
       SET
         status = $2,
+        resolved_at = CASE
+          WHEN $2 = 'RESOLVED' THEN COALESCE(resolved_at, NOW())
+          ELSE NULL
+        END,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *

@@ -25,6 +25,20 @@ export async function findUserByEmail(email: string) {
   return result.rows[0] ?? null;
 }
 
+export async function findUserCandidateByEmail(email: string) {
+  const result = await pool.query(
+    `
+      SELECT id, name, email
+      FROM users
+      WHERE LOWER(email) = LOWER($1)
+      LIMIT 1
+    `,
+    [email.trim()],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function findUserById(id: string) {
   const result = await pool.query(
     `

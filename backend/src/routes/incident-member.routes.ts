@@ -9,5 +9,6 @@ incidentMemeberRouter.use(authenticate);
 incidentMemeberRouter.post("/:incidentId/members", incidentMemberController.add);
 incidentMemeberRouter.get("/:incidentId/members", incidentMemberController.list);
 incidentMemeberRouter.delete("/:incidentId/members/:userId", incidentMemberController.remove);
+incidentMemeberRouter.get("/:incidentId/member-candidates", incidentMemberController.findCandidate);
 
 export default incidentMemeberRouter;

@@ -40,15 +40,43 @@ export async function findMembers(incidentId: string) {
 }
 
 export async function removeMember(incidentId: string, userId: string) {
-  const result = await pool.query(
-    `
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Keep tasks within this incident assigned only to its current members.
+    await client.query(
+      `
+        UPDATE tasks
+        SET assigned_to = NULL, updated_at = NOW()
+        WHERE incident_id = $1 AND assigned_to = $2
+      `,
+      [incidentId, userId],
+    );
+
+    const result = await client.query(
+      `
         DELETE FROM incident_members
         WHERE incident_id = $1 AND user_id = $2
-        RETURNING *
-    `,
-    [incidentId, userId],
-  );
-  return result.rows[0];
+        RETURNING incident_id, user_id, role
+      `,
+      [incidentId, userId],
+    );
+
+    if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function isIncidentMember(incidentId: string, userId: string): Promise<boolean> {

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, Circle, Clock3, LoaderCircle, Pencil, Plus, Trash2, UserRound, X, ListTodo } from "lucide-react";
+
 import { createTask, deleteTask, updateTask } from "@/api/tasks.api";
 import type { IncidentMember } from "@/types/memberTypes";
-import type { Task, TaskStatus } from "@/types/taskTypes";
+import type { CreateTaskInput, Task, TaskStatus } from "@/types/taskTypes";
 
 interface TaskListProps {
   incidentId: string;
@@ -20,77 +21,34 @@ const statusLabels: Record<TaskStatus, string> = {
   COMPLETED: "Completed",
 };
 
+const statusStyles: Record<TaskStatus, string> = {
+  TODO: "border-[#6fa9ff]/40 bg-[#6fa9ff]/10 text-[#6fa9ff]",
+  IN_PROGRESS: "border-[#e7b65d]/40 bg-[#e7b65d]/10 text-[#e7b65d]",
+  COMPLETED: "border-[#54c89b]/40 bg-[#54c89b]/10 text-[#54c89b]",
+};
+
+const statusIndicatorStyles: Record<TaskStatus, string> = {
+  TODO: "border-[#6fa9ff] bg-[#6fa9ff]/10 text-[#6fa9ff]",
+  IN_PROGRESS: "border-[#e7b65d] bg-[#e7b65d]/10 text-[#e7b65d]",
+  COMPLETED: "border-[#54c89b] bg-[#54c89b] text-[#07120d]",
+};
+
+const roleStyles: Record<"OWNER" | "RESPONDER" | "VIEWER", string> = {
+  OWNER: "text-[#aab7ff]",
+  RESPONDER: "text-[#6fa9ff]",
+  VIEWER: "text-[#aeb5bf]",
+};
+
 export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged }: TaskListProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [newAssignee, setNewAssignee] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const completedCount = tasks.filter((task) => task.status === "COMPLETED").length;
+  const completed = tasks.filter((task) => task.status === "COMPLETED").length;
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-
-    if (title.trim().length < 3) {
-      setError("Task title must contain at least 3 characters.");
-      return;
-    }
-
-    setCreating(true);
-
-    try {
-      await createTask(incidentId, {
-        title: title.trim(),
-        description: description.trim() || null,
-        assignedTo: newAssignee || null,
-      });
-
-      setTitle("");
-      setDescription("");
-      setNewAssignee("");
-      await onTasksChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create task.");
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function handleStatusChange(task: Task, status: TaskStatus) {
-    setError(null);
-    setPendingTaskId(task.id);
-
-    try {
-      await updateTask(task.id, { status });
-      await onTasksChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update task.");
-    } finally {
-      setPendingTaskId(null);
-    }
-  }
-
-  async function handleAssigneeChange(task: Task, assignedTo: string) {
-    setError(null);
-    setPendingTaskId(task.id);
-
-    try {
-      await updateTask(task.id, { assignedTo: assignedTo || null });
-      await onTasksChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to assign task.");
-    } finally {
-      setPendingTaskId(null);
-    }
-  }
-
-  async function handleDelete(task: Task) {
-    const confirmed = window.confirm(`Delete "${task.title}"? This action cannot be undone.`);
-
-    if (!confirmed) return;
+  async function removeTask(task: Task) {
+    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
 
     setError(null);
     setPendingTaskId(task.id);
@@ -99,133 +57,271 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
       await deleteTask(task.id);
       await onTasksChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete task.");
+      setError(err instanceof Error ? err.message : "Unable to delete this task.");
     } finally {
       setPendingTaskId(null);
     }
   }
 
   return (
-    <div className="space-y-5">
+    <>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[#dce0e5]">Response tasks</h2>
-          <p className="mt-1 text-xs text-[#68717f]">Track the work required to resolve this incident.</p>
+          <div className="flex items-center gap-2">
+            <ListIcon />
+            <h2 className="text-sm font-semibold text-[#e9ebee]">Response tasks</h2>
+          </div>
+          <p className="mt-1 text-xs text-[#68717f]">
+            {completed}/{tasks.length} completed
+          </p>
         </div>
 
-        <span className="shrink-0 rounded-md border border-[#252b35] px-2 py-1 text-xs text-[#9ca4b1]">
-          {completedCount}/{tasks.length} done
-        </span>
+        {canManage && (
+          <button type="button" onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#f1f3f5] px-3 py-2 text-xs font-semibold text-[#090b0f] transition hover:bg-white">
+            <Plus size={14} />
+            Add task
+          </button>
+        )}
       </div>
 
       {error && (
-        <div role="alert" className="rounded-lg border border-[#ff6262]/25 bg-[#ff6262]/5 px-3 py-2 text-sm text-[#ff8585]">
+        <div role="alert" className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">
           {error}
         </div>
       )}
 
-      {canManage && (
-        <form onSubmit={handleCreate} className="space-y-3 rounded-lg border border-[#252b35] bg-[#10141b] p-3">
+      <div className="mt-4">
+        {tasks.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#343b46] px-4 py-8 text-center">
+            <p className="text-sm font-medium text-[#aeb5bf]">No response tasks yet</p>
+            <p className="mt-1 text-xs text-[#68717f]">Create a focused next action for the response team.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#1b2028]">
+            {tasks.map((task) => {
+              const pending = pendingTaskId === task.id;
+              const completedTask = task.status === "COMPLETED";
+
+              return (
+                <article key={task.id} className="py-3.5 first:pt-0 last:pb-0">
+                  <div className="flex items-start gap-3">
+                    <span aria-label={statusLabels[task.status]} className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${statusIndicatorStyles[task.status]}`}>
+                      {completedTask ? <Check size={12} strokeWidth={3} /> : task.status === "IN_PROGRESS" ? <Clock3 size={11} /> : <Circle size={8} fill="currentColor" />}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className={`break-words text-sm font-medium ${completedTask ? "text-[#68717f] line-through" : "text-[#dce0e5]"}`}>{task.title}</p>
+
+                          {task.description && <p className="mt-1 break-words text-xs leading-5 text-[#68717f]">{task.description}</p>}
+                        </div>
+
+                        {canManage && (
+                          <div className="flex shrink-0 items-center">
+                            <button type="button" disabled={pending} onClick={() => setEditingTask(task)} aria-label={`Edit ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#1a202a] hover:text-[#dce0e5]">
+                              <Pencil size={14} />
+                            </button>
+
+                            <button type="button" disabled={pending} onClick={() => void removeTask(task)} aria-label={`Delete ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585]">
+                              {pending ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <TaskStatus status={task.status} />
+                        <span className={`inline-flex items-center gap-1.5 text-md text-[#8993a1] ${roleStyles[task.assigned_user_role ?? "VIEWER"]}`}>
+                          <UserRound size={15} />
+                          {task.assigned_user_name ?? "Unassigned"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {createOpen && (
+        <TaskDialog
+          title="Create response task"
+          members={members}
+          submitLabel="Create task"
+          onClose={() => setCreateOpen(false)}
+          onSubmit={async (data) => {
+            await createTask(incidentId, data);
+            await onTasksChanged();
+            setCreateOpen(false);
+          }}
+        />
+      )}
+
+      {editingTask && (
+        <TaskDialog
+          title="Edit task"
+          members={members}
+          initialTask={editingTask}
+          submitLabel="Save changes"
+          onClose={() => setEditingTask(null)}
+          onSubmit={async (data) => {
+            await updateTask(editingTask.id, data);
+            await onTasksChanged();
+            setEditingTask(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function TaskDialog({ title, members, initialTask, submitLabel, onClose, onSubmit }: { title: string; members: IncidentMember[]; initialTask?: Task; submitLabel: string; onClose: () => void; onSubmit: (data: CreateTaskInput & { status?: TaskStatus }) => Promise<void> }) {
+  const [taskTitle, setTaskTitle] = useState(initialTask?.title ?? "");
+  const [description, setDescription] = useState(initialTask?.description ?? "");
+  const [assignedTo, setAssignedTo] = useState(initialTask?.assigned_user_id ?? "");
+  const [status, setStatus] = useState<TaskStatus>(initialTask?.status ?? "TODO");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (taskTitle.trim().length < 3) {
+      setError("Task title must contain at least 3 characters.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await onSubmit({
+        title: taskTitle.trim(),
+        description: description.trim() || null,
+        assignedTo: assignedTo || null,
+        ...(initialTask ? { status } : {}),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save task.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/65 p-0 sm:items-center sm:justify-center sm:p-5">
+      <form onSubmit={submit} className="w-full rounded-t-2xl border border-[#343b46] bg-[#0e1117] p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-[#f1f3f5]">{title}</h3>
+            <p className="mt-1 text-xs text-[#68717f]">Create a clear, owned next action.</p>
+          </div>
+
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg p-2 text-[#8993a1] hover:bg-[#1a202a] hover:text-white">
+            <X size={17} />
+          </button>
+        </div>
+
+        {error && <p className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">{error}</p>}
+
+        <div className="mt-5 space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#9ca4b1]">Task title</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={255} minLength={3} required placeholder="e.g. Check database connection pool" className="w-full rounded-md border border-[#303744] bg-[#0b0e13] px-3 py-2 text-sm text-[#dce0e5] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
+            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Task title</span>
+            <input autoFocus required minLength={3} maxLength={255} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="e.g. Check database connection pool" className="w-full rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#9ca4b1]">
+            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">
               Description <span className="text-[#505865]">(optional)</span>
             </span>
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={5000} rows={2} placeholder="Add useful context or completion criteria" className="w-full resize-y rounded-md border border-[#303744] bg-[#0b0e13] px-3 py-2 text-sm text-[#dce0e5] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
+            <textarea rows={4} maxLength={5000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What needs to happen? What does done look like?" className="w-full resize-none rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
           </label>
 
+          {initialTask && (
+            <fieldset>
+              <legend className="mb-1.5 text-xs font-medium text-[#aeb5bf]">Status</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(statusLabels) as TaskStatus[]).map((option) => {
+                  const selected = status === option;
+
+                  return (
+                    <button key={option} type="button" onClick={() => setStatus(option)} className={`rounded-lg border px-2 py-2 text-center text-[11px] font-medium transition ${selected ? statusStyles[option] : "border-[#303744] bg-[#090b0f] text-[#68717f] hover:border-[#505865]"}`}>
+                      {statusLabels[option]}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#9ca4b1]">Assign to</span>
-            <select value={newAssignee} onChange={(event) => setNewAssignee(event.target.value)} className="w-full rounded-md border border-[#303744] bg-[#0b0e13] px-3 py-2 text-sm text-[#dce0e5] outline-none focus:border-[#7185ff]">
-              <option value="">Unassigned</option>
+            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Assignee</span>
+            <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[#303744] bg-[#090b0f] p-1.5">
+              <button type="button" onClick={() => setAssignedTo("")} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition ${assignedTo === "" ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#252b35] text-[#8993a1]">
+                  <UserRound size={12} />
+                </span>
+                <span className="flex-1">Unassigned</span>
+                {assignedTo === "" && <Check size={14} className="text-[#aab7ff]" />}
+              </button>
+
+              {members.map((member) => {
+                const selected = assignedTo === member.id;
+
+                return (
+                  <button key={member.id} type="button" onClick={() => setAssignedTo(member.id)} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition ${selected ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#343b46] text-[10px] font-semibold text-[#dce0e5]">{member.name.slice(0, 1).toUpperCase()}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-medium">{member.name}</span>
+                      <span className="block text-[10px] text-[#68717f]">{member.role.toLowerCase()}</span>
+                    </span>
+                    {selected && <Check size={14} className="shrink-0 text-[#aab7ff]" />}
+                  </button>
+                );
+              })}
+            </div>
+            <select aria-hidden="true" tabIndex={-1} value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="hidden">
+              <option value="">Leave unassigned</option>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.name} ({member.role.toLowerCase()})
+                  {member.name} · {member.role.toLowerCase()}
                 </option>
               ))}
             </select>
           </label>
+        </div>
 
-          <button type="submit" disabled={creating} className="inline-flex items-center gap-2 rounded-md bg-[#dce4ff] px-3 py-2 text-sm font-semibold text-[#111827] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
-            <Plus size={15} />
-            {creating ? "Creating..." : "Add task"}
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" disabled={saving} onClick={onClose} className="rounded-lg px-3 py-2 text-sm text-[#aeb5bf] hover:bg-[#1a202a]">
+            Cancel
           </button>
-        </form>
-      )}
-
-      {tasks.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#303744] px-4 py-8 text-center">
-          <p className="text-sm text-[#9ca4b1]">No response tasks yet.</p>
-          {canManage && <p className="mt-1 text-xs text-[#68717f]">Create a task to give the team a clear next action.</p>}
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#f1f3f5] px-3.5 py-2 text-sm font-semibold text-[#090b0f] hover:bg-white disabled:opacity-50">
+            {saving && <LoaderCircle size={14} className="animate-spin" />}
+            {saving ? "Saving..." : submitLabel}
+          </button>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {tasks.map((task) => {
-            const isPending = pendingTaskId === task.id;
-
-            return (
-              <article key={task.id} className="rounded-lg border border-[#252b35] bg-[#10141b] p-3">
-                <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${task.status === "COMPLETED" ? "border-[#54c89b] bg-[#54c89b] text-[#09110e]" : "border-[#414957] text-[#68717f]"}`} aria-label={statusLabels[task.status]}>
-                    {task.status === "COMPLETED" ? "✓" : ""}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className={`break-words text-sm font-medium ${task.status === "COMPLETED" ? "text-[#68717f] line-through" : "text-[#dce0e5]"}`}>{task.title}</p>
-
-                    {task.description && <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#68717f]">{task.description}</p>}
-
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      {canManage ? (
-                        <label className="min-w-0 flex-1">
-                          <span className="sr-only">Assignee for {task.title}</span>
-                          <select value={task.assigned_user_id ?? ""} disabled={isPending} onChange={(event) => handleAssigneeChange(task, event.target.value)} className="w-full rounded-md border border-[#303744] bg-[#0b0e13] px-2 py-1.5 text-xs text-[#9ca4b1] outline-none focus:border-[#7185ff] disabled:opacity-50">
-                            <option value="">Unassigned</option>
-                            {members.map((member) => (
-                              <option key={member.id} value={member.id}>
-                                {member.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <p className="min-w-0 flex-1 text-xs text-[#68717f]">{task.assigned_user_name ?? "Unassigned"}</p>
-                      )}
-
-                      {canManage ? (
-                        <label>
-                          <span className="sr-only">Status for {task.title}</span>
-                          <select value={task.status} disabled={isPending} onChange={(event) => handleStatusChange(task, event.target.value as TaskStatus)} className="w-full rounded-md border border-[#303744] bg-[#0b0e13] px-2 py-1.5 text-xs text-[#dce0e5] outline-none focus:border-[#7185ff] disabled:opacity-50 sm:w-auto">
-                            {Object.entries(statusLabels).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <span className="text-xs text-[#9ca4b1]">{statusLabels[task.status]}</span>
-                      )}
-
-                      {canManage && (
-                        <button type="button" disabled={isPending} onClick={() => handleDelete(task)} aria-label={`Delete ${task.title}`} title="Delete task" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585] disabled:opacity-50">
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                    </div>
-
-                    {isPending && <p className="mt-2 text-[11px] text-[#68717f]">Saving changes…</p>}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+      </form>
     </div>
+  );
+}
+
+function TaskStatus({ status }: { status: TaskStatus }) {
+  const icon = status === "COMPLETED" ? <ListTodo size={12} /> : status === "IN_PROGRESS" ? <Clock3 size={12} /> : <Circle size={12} />;
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm  font-medium ${statusStyles[status]}`}>
+      {icon}
+      {statusLabels[status]}
+    </span>
+  );
+}
+
+function ListIcon() {
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b9cff]/10 text-[#aab7ff]">
+      <CheckCircle2 size={15} />
+    </span>
   );
 }

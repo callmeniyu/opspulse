@@ -8,6 +8,7 @@ export interface Task {
   status: TaskStatus;
   assigned_user_id: string | null;
   assigned_user_name: string | null;
+  assigned_user_role: "OWNER" | "RESPONDER" | "VIEWER" | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
