@@ -45,6 +45,7 @@ export async function removeMember(incidentId: string, userId: string) {
   try {
     await client.query("BEGIN");
 
+    // Keep tasks within this incident assigned only to its current members.
     await client.query(
       `
         UPDATE tasks

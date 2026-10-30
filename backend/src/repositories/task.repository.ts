@@ -33,9 +33,11 @@ export async function findTasks(incidentId: string) {
         t.updated_at,
         t.created_by,
         t.assigned_to AS assigned_user_id,
-        u.name AS assigned_user_name
+        u.name AS assigned_user_name,
+        im.role AS assigned_user_role
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assigned_to
+      LEFT JOIN incident_members im ON im.incident_id = t.incident_id AND im.user_id = t.assigned_to
       WHERE t.incident_id = $1
       ORDER BY
         CASE t.status
