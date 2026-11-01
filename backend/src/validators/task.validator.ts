@@ -13,11 +13,14 @@ export const updateTaskSchema = z
     title: z.string().trim().min(3).max(255).optional(),
     description: z.string().max(5000).nullable().optional(),
     assignedTo: z.string().uuid().nullable().optional(),
-    status: z.enum(["TODO", "IN_PROGRESS", "COMPLETED"]).optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: "Provide at least one field to update",
   });
+
+export const updateTaskStatusSchema = z.object({
+  status: z.enum(["TODO", "IN_PROGRESS", "COMPLETED"]),
+});
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

@@ -10,6 +10,7 @@ export interface Task {
   assigned_user_name: string | null;
   assigned_user_role: "OWNER" | "RESPONDER" | "VIEWER" | null;
   created_by: string | null;
+  created_by_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,5 +25,4 @@ export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
   assignedTo?: string | null;
-  status?: TaskStatus;
 }

@@ -2,7 +2,7 @@ import { createIncident, findIncidents, findIncidentById, updateIncident, update
 
 import type { CreateIncidentInput, UpdateIncidentInput, UpdateIncidentStatusInput } from "../validators/incident.validator.js";
 
-import { findIncidentsForUser, getIncidentRole } from "../repositories/incident-access.repository.js";
+import { findIncidentOwner, findIncidentsForUser, getIncidentRole } from "../repositories/incident-access.repository.js";
 
 import { HttpError } from "../utils/HttpError.js";
 import type { IncidentStatus } from "../types/incidentTypes.js";
@@ -23,9 +23,10 @@ export async function getById(id: string, userId: string) {
   }
 
   const role = await getIncidentRole(id, userId);
+  const owner = await findIncidentOwner(id);
 
   if (!role) {
-    throw new HttpError(403, "You do not have access to this incident");
+    throw new HttpError(403, `You do not have access to this incident. Please contact the incident owner ${owner?.name} for access.`);
   }
 
   return { ...incident, current_user_role: role };

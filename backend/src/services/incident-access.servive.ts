@@ -1,10 +1,6 @@
 import { getIncidentRole } from "../repositories/incident-access.repository.js";
 import { HttpError } from "../utils/HttpError.js";
 
-function canManageTasks(role: string | null): boolean {
-  return role === "OWNER" || role === "RESPONDER";
-}
-
 export async function requireTaskManager(incidentId: string, userId: string) {
   const role = await getIncidentRole(incidentId, userId);
 
@@ -12,7 +8,7 @@ export async function requireTaskManager(incidentId: string, userId: string) {
     throw new HttpError(403, "You do not have access to this incident");
   }
 
-  if (!canManageTasks(role)) {
+  if (role !== "OWNER" && role !== "RESPONDER") {
     throw new HttpError(403, "Only incident owners and responders can manage tasks");
   }
 }

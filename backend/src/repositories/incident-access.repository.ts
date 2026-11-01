@@ -44,3 +44,20 @@ export async function findIncidentsForUser(userId: string) {
 
   return result.rows;
 }
+
+export async function findIncidentOwner(incidentId: string) {
+  const result = await pool.query(
+    `
+      SELECT 
+        u.id AS owner_id,
+        u.name
+      FROM incidents i
+      JOIN users u ON u.id = i.created_by
+      WHERE i.id = $1
+      LIMIT 1
+    `,
+    [incidentId],
+  );
+
+  return result.rows[0] ?? null;
+}

@@ -131,7 +131,7 @@ export default function MyTasksPage() {
         ) : (
           <div className="space-y-5">
             {groups.map((group) => (
-              <section key={group.incidentId} className="overflow-hidden rounded-xl border border-[#252b35] bg-[#0e1117]">
+              <section key={group.incidentId} className="flex-1 overflow-hidden rounded-xl border border-[#252b35] bg-[#0e1117]">
                 <Link href={`/incidents/${group.incidentId}`} className="flex items-center justify-between gap-4 border-b border-[#252b35] px-4 py-4 transition hover:bg-[#11151c] sm:px-5">
                   <IncidentMeta title={group.incidentTitle} severity={group.incidentSeverity} status={group.incidentStatus} />
                   <div className="flex shrink-0 items-center gap-2 text-xs text-[#68717f]">
@@ -147,9 +147,11 @@ export default function MyTasksPage() {
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm ${task.status === "COMPLETED" ? "text-[#68717f] line-through" : "text-[#dce0e5]"}`}>{task.title}</p>
                         {task.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#68717f]">{task.description}</p>}
-                        <p className="mt-2 text-[10px] uppercase tracking-wider text-[#68717f]">Updated {new Date(task.updated_at).toLocaleDateString()}</p>
+                        <div className="flex gap-2 mt-2 items-center">
+                          <TaskStatusLabel status={task.status} />
+                          <p className="text-[10px] uppercase tracking-wider text-[#68717f]">Updated {new Date(task.updated_at).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <TaskStatusLabel status={task.status} />
                     </div>
                   ))}
                 </div>

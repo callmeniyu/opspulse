@@ -63,13 +63,50 @@ export async function update(taskId: string, input: UpdateTaskInput, currentUser
     throw new HttpError(404, "Task not found");
   }
 
-  await requireTaskManager(task.incident_id, currentUserId);
+  const role = await getIncidentRole(task.incident_id, currentUserId);
+
+  if (!role) {
+    throw new HttpError(403, "You do not have access to this incident");
+  }
+
+  if (role === "VIEWER" || task.created_by !== currentUserId) {
+    throw new HttpError(403, "Only the task creator can edit task details");
+  }
 
   if (input.assignedTo !== undefined) {
     await validateAssignee(task.incident_id, input.assignedTo);
   }
 
   const updatedTask = await taskRepository.updateTask(taskId, input);
+
+  if (!updatedTask) {
+    throw new HttpError(404, "Task not found");
+  }
+
+  return updatedTask;
+}
+
+export async function updateStatus(taskId: string, status: TaskStatus, currentUserId: string) {
+  const task = await taskRepository.findTaskById(taskId);
+
+  if (!task) {
+    throw new HttpError(404, "Task not found");
+  }
+
+  const role = await getIncidentRole(task.incident_id, currentUserId);
+
+  if (!role) {
+    throw new HttpError(403, "You do not have access to this incident");
+  }
+
+  const isTaskCreator = task.created_by === currentUserId;
+  const canManageStatus = role === "OWNER" || role === "RESPONDER";
+
+  if (role === "VIEWER" || (!isTaskCreator && !canManageStatus)) {
+    throw new HttpError(403, "Only the task creator or incident responders can change task status");
+  }
+
+  const updatedTask = await taskRepository.updateTaskStatus(taskId, status);
 
   if (!updatedTask) {
     throw new HttpError(404, "Task not found");
@@ -85,7 +122,15 @@ export async function remove(taskId: string, currentUserId: string) {
     throw new HttpError(404, "Task not found");
   }
 
-  await requireTaskManager(task.incident_id, currentUserId);
+  const role = await getIncidentRole(task.incident_id, currentUserId);
+
+  if (!role) {
+    throw new HttpError(403, "You do not have access to this incident");
+  }
+
+  if (role === "VIEWER" || task.created_by !== currentUserId) {
+    throw new HttpError(403, "Only the task creator can delete this task");
+  }
 
   const deletedTask = await taskRepository.deleteTask(taskId);
 

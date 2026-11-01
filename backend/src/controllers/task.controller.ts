@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import * as taskService from "../services/task.service.js";
-import { createTaskSchema, updateTaskSchema, type CreateTaskInput, type UpdateTaskInput } from "../validators/task.validator.js";
+import { createTaskSchema, updateTaskSchema, updateTaskStatusSchema, type CreateTaskInput, type UpdateTaskInput } from "../validators/task.validator.js";
 
 export async function create(req: Request<{ incidentId: string }, {}, CreateTaskInput>, res: Response, next: NextFunction) {
   try {
@@ -41,6 +41,20 @@ export async function update(req: Request<{ taskId: string }, {}, UpdateTaskInpu
     const { taskId } = req.params;
     const input = updateTaskSchema.parse(req.body);
     const task = await taskService.update(taskId, input, req.user.id);
+    res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateStatus(req: Request<{ taskId: string }, {}, { status: string }>, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { taskId } = req.params;
+    const { status } = updateTaskStatusSchema.parse(req.body);
+    const task = await taskService.updateStatus(taskId, status, req.user.id);
     res.json({ task });
   } catch (error) {
     next(error);
