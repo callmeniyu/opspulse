@@ -5,6 +5,8 @@ import { Check, CheckCircle2, ChevronDown, CircleDot, LoaderCircle, Pencil, Sear
 
 import { changeIncidentStatus, updateIncident } from "@/api/incident.api";
 import type { Incident, IncidentSeverity, IncidentStatus } from "@/types/incidentTypes";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface Props {
   incident: Incident;
@@ -38,24 +40,21 @@ export function IncidentManagementControls({ incident, canEditDetails, canChange
   const [editOpen, setEditOpen] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [confirmResolve, setConfirmResolve] = useState(false);
+  const { showToast } = useToast();
 
   async function changeStatus(status: IncidentStatus) {
     if (status === incident.status) return;
 
-    if (status === "RESOLVED" && !window.confirm("Resolve this incident? You can later reopen it by changing the status.")) {
-      return;
-    }
-
     setChangingStatus(true);
-    setError(null);
 
     try {
       await changeIncidentStatus(incident.id, status);
       await onIncidentChanged();
       setStatusMenuOpen(false);
+      showToast(`Incident status changed to ${statuses.find((item) => item.value === status)?.label}.`, "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to change incident status.");
+      showToast(err instanceof Error ? err.message : "Unable to change incident status.", "error");
     } finally {
       setChangingStatus(false);
     }
@@ -63,11 +62,10 @@ export function IncidentManagementControls({ incident, canEditDetails, canChange
 
   return (
     <>
-      <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-xl border border-[#303744] bg-[#090b0f]/75 p-1.5 shadow-sm">
+      <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-xl">
         {canEditDetails && (
-          <button type="button" onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[#aeb5bf] transition hover:bg-[#1a202a] hover:text-[#f1f3f5]">
+          <button type="button" onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 rounded-lg px-4 py-3 text-xs font-medium bg-[#1a202a] text-[#aeb5bf] transition hover:bg-[#252b35] hover:text-[#f1f3f5]">
             <Pencil size={14} />
-            Edit details
           </button>
         )}
 
@@ -88,7 +86,7 @@ export function IncidentManagementControls({ incident, canEditDetails, canChange
                   const active = status.value === incident.status;
 
                   return (
-                    <button key={status.value} type="button" role="menuitem" disabled={active || changingStatus} onClick={() => void changeStatus(status.value)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${active ? "cursor-default bg-[#252b35]" : "hover:bg-[#1a202a]"}`}>
+                    <button key={status.value} type="button" role="menuitem" disabled={active || changingStatus} onClick={() => (status.value === "RESOLVED" ? setConfirmResolve(true) : void changeStatus(status.value))} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${active ? "cursor-default bg-[#252b35]" : "hover:bg-[#1a202a]"}`}>
                       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${active ? "bg-[#343b46]" : "bg-[#0e1117]"}`}>
                         <Icon size={14} className={active ? "text-[#f1f3f5]" : "text-[#8993a1]"} />
                       </span>
@@ -108,15 +106,27 @@ export function IncidentManagementControls({ incident, canEditDetails, canChange
         )}
       </div>
 
-      {error && <p className="mt-3 text-xs text-[#ff8585]">{error}</p>}
-
       {editOpen && (
         <EditIncidentDialog
           incident={incident}
           onClose={() => setEditOpen(false)}
           onSaved={async () => {
             await onIncidentChanged();
+            showToast("Incident details updated.", "success");
             setEditOpen(false);
+          }}
+        />
+      )}
+      {confirmResolve && (
+        <ConfirmationDialog
+          title="Resolve this incident?"
+          message="You can reopen it later by changing the status."
+          confirmLabel="Resolve incident"
+          busy={changingStatus}
+          onCancel={() => setConfirmResolve(false)}
+          onConfirm={() => {
+            setConfirmResolve(false);
+            void changeStatus("RESOLVED");
           }}
         />
       )}
@@ -130,6 +140,7 @@ function EditIncidentDialog({ incident, onClose, onSaved }: { incident: Incident
   const [severity, setSeverity] = useState<IncidentSeverity>(incident.severity);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setTitle(incident.title);
@@ -157,7 +168,8 @@ function EditIncidentDialog({ incident, onClose, onSaved }: { incident: Incident
 
       await onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update incident.");
+      showToast(err instanceof Error ? err.message : "Unable to update incident.", "error");
+      setError(null);
       setSaving(false);
     }
   }

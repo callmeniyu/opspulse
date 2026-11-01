@@ -6,6 +6,8 @@ import { Check, CheckCircle2, Circle, Clock3, LoaderCircle, Pencil, Plus, Trash2
 import { createTask, deleteTask, updateTask } from "@/api/tasks.api";
 import type { IncidentMember } from "@/types/memberTypes";
 import type { CreateTaskInput, Task, TaskStatus } from "@/types/taskTypes";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface TaskListProps {
   incidentId: string;
@@ -43,21 +45,20 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
   const [createOpen, setCreateOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [confirmTask, setConfirmTask] = useState<Task | null>(null);
+  const { showToast } = useToast();
 
   const completed = tasks.filter((task) => task.status === "COMPLETED").length;
 
   async function removeTask(task: Task) {
-    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
-
-    setError(null);
     setPendingTaskId(task.id);
 
     try {
       await deleteTask(task.id);
       await onTasksChanged();
+      showToast("Task deleted.", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete this task.");
+      showToast(err instanceof Error ? err.message : "Unable to delete this task.", "error");
     } finally {
       setPendingTaskId(null);
     }
@@ -83,12 +84,6 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
           </button>
         )}
       </div>
-
-      {error && (
-        <div role="alert" className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">
-          {error}
-        </div>
-      )}
 
       <div className="mt-4">
         {tasks.length === 0 ? (
@@ -123,7 +118,7 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
                               <Pencil size={14} />
                             </button>
 
-                            <button type="button" disabled={pending} onClick={() => void removeTask(task)} aria-label={`Delete ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585]">
+                            <button type="button" disabled={pending} onClick={() => setConfirmTask(task)} aria-label={`Delete ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585]">
                               {pending ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}
                             </button>
                           </div>
@@ -155,6 +150,7 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
           onSubmit={async (data) => {
             await createTask(incidentId, data);
             await onTasksChanged();
+            showToast("Task created.", "success");
             setCreateOpen(false);
           }}
         />
@@ -170,10 +166,12 @@ export function TaskList({ incidentId, tasks, members, canManage, onTasksChanged
           onSubmit={async (data) => {
             await updateTask(editingTask.id, data);
             await onTasksChanged();
+            showToast("Task updated.", "success");
             setEditingTask(null);
           }}
         />
       )}
+      {confirmTask && <ConfirmationDialog title="Delete task?" message={`Delete “${confirmTask.title}”? This cannot be undone.`} confirmLabel="Delete" onCancel={() => setConfirmTask(null)} onConfirm={() => { const task = confirmTask; setConfirmTask(null); void removeTask(task); }} />}
     </>
   );
 }
@@ -185,6 +183,7 @@ function TaskDialog({ title, members, initialTask, submitLabel, onClose, onSubmi
   const [status, setStatus] = useState<TaskStatus>(initialTask?.status ?? "TODO");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,14 +204,14 @@ function TaskDialog({ title, members, initialTask, submitLabel, onClose, onSubmi
         ...(initialTask ? { status } : {}),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save task.");
+      showToast(err instanceof Error ? err.message : "Unable to save task.", "error");
       setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/65 p-0 sm:items-center sm:justify-center sm:p-5">
-      <form onSubmit={submit} className="w-full rounded-t-2xl border border-[#343b46] bg-[#0e1117] p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-end overflow-y-auto bg-black/65 p-0 sm:items-center sm:justify-center sm:p-5">
+      <form onSubmit={submit} className="my-auto max-h-[calc(100dvh-1.25rem)] w-full overflow-y-auto rounded-t-2xl border border-[#343b46] bg-[#0e1117] p-5 shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-lg sm:rounded-2xl">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-[#f1f3f5]">{title}</h3>

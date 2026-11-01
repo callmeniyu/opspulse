@@ -6,9 +6,10 @@ const incidentMemeberRouter = Router();
 
 incidentMemeberRouter.use(authenticate);
 
-incidentMemeberRouter.post("/:incidentId/members", incidentMemberController.add);
-incidentMemeberRouter.get("/:incidentId/members", incidentMemberController.list);
-incidentMemeberRouter.delete("/:incidentId/members/:userId", incidentMemberController.remove);
 incidentMemeberRouter.get("/:incidentId/member-candidates", incidentMemberController.findCandidate);
+incidentMemeberRouter.get("/:incidentId/members", incidentMemberController.list);
+incidentMemeberRouter.patch("/:incidentId/members/:userId", incidentMemberController.updateRole);
+incidentMemeberRouter.post("/:incidentId/members", incidentMemberController.add);
+incidentMemeberRouter.delete("/:incidentId/members/:userId", incidentMemberController.remove);
 
 export default incidentMemeberRouter;

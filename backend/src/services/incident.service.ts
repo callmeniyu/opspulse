@@ -5,6 +5,7 @@ import type { CreateIncidentInput, UpdateIncidentInput, UpdateIncidentStatusInpu
 import { findIncidentsForUser, getIncidentRole } from "../repositories/incident-access.repository.js";
 
 import { HttpError } from "../utils/HttpError.js";
+import type { IncidentStatus } from "../types/incidentTypes.js";
 
 export async function create(input: CreateIncidentInput, userId: string) {
   return await createIncident(input.title, input.description, input.severity, userId);
@@ -56,7 +57,7 @@ export async function update(id: string, input: UpdateIncidentInput, userId: str
   return updated;
 }
 
-export async function changeStatus(id: string, input: UpdateIncidentStatusInput, userId: string) {
+export async function changeStatus(id: string, input: { status: IncidentStatus }, userId: string) {
   const incident = await findIncidentById(id);
 
   if (!incident) {

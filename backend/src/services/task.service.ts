@@ -7,22 +7,7 @@ import type { TaskStatus } from "../types/taskTypes.js";
 import type { CreateTaskInput, UpdateTaskInput } from "../validators/task.validator.js";
 
 import { HttpError } from "../utils/HttpError.js";
-
-function canManageTasks(role: string | null): boolean {
-  return role === "OWNER" || role === "RESPONDER";
-}
-
-async function requireTaskManager(incidentId: string, userId: string) {
-  const role = await getIncidentRole(incidentId, userId);
-
-  if (!role) {
-    throw new HttpError(403, "You do not have access to this incident");
-  }
-
-  if (!canManageTasks(role)) {
-    throw new HttpError(403, "Only incident owners and responders can manage tasks");
-  }
-}
+import { requireTaskManager } from "./incident-access.servive.js";
 
 async function validateAssignee(incidentId: string, assignedTo: string | null | undefined) {
   if (assignedTo == null) {
@@ -33,6 +18,12 @@ async function validateAssignee(incidentId: string, assignedTo: string | null | 
 
   if (!isMember) {
     throw new HttpError(400, "The task assignee must be a member of this incident");
+  }
+
+  const role = await getIncidentRole(incidentId, assignedTo);
+
+  if (role == "VIEWER") {
+    throw new HttpError(400, "The task assignee must be an incident owner or responder");
   }
 }
 

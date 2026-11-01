@@ -11,6 +11,7 @@ import { loginSuccess } from "@/store/slices/authSlice";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/ToastProvider";
 import Link from "next/link";
 
 interface LoginResponse {
@@ -32,6 +33,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +51,9 @@ export default function LoginPage() {
       dispatch(loginSuccess({ user: result.user }));
       router.push("/incidents");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Unable to login");
+      const message = error instanceof Error ? error.message : "Unable to login";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
