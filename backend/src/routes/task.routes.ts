@@ -10,6 +10,7 @@ taskRouter.post("/incidents/:incidentId/tasks", taskController.create);
 taskRouter.get("/incidents/:incidentId/tasks", taskController.list);
 
 taskRouter.patch("/tasks/:taskId", taskController.update);
+taskRouter.patch("/tasks/:taskId/status", taskController.updateStatus);
 taskRouter.delete("/tasks/:taskId", taskController.remove);
 
 export default taskRouter;

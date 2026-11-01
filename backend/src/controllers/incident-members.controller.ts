@@ -57,6 +57,22 @@ export async function list(req: Request<{ incidentId: string }>, res: Response, 
   }
 }
 
+export async function updateRole(req: Request<{ incidentId: string; userId: string }>, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { incidentId, userId } = req.params;
+    const { role } = req.body;
+
+    const result = await incidentMemberService.updateRole(incidentId, userId, role, req.user.id);
+
+    return res.status(200).json({ member: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function remove(req: Request<{ incidentId: string; userId: string }>, res: Response, next: NextFunction) {
   try {
     if (!req.user) {

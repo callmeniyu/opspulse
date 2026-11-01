@@ -1,4 +1,5 @@
 import { pool } from "../db/client.js";
+import type { IncidentStatus } from "../types/incidentTypes.js";
 
 export async function createIncident(title: string, description: string | undefined, severity: string, createdBy: string) {
   const client = await pool.connect();
@@ -111,14 +112,14 @@ export async function updateIncident(id: string, title: string | undefined, desc
   return result.rows[0] ?? null;
 }
 
-export async function updateIncidentStatus(id: string, status: string) {
+export async function updateIncidentStatus(id: string, status: IncidentStatus) {
   const result = await pool.query(
     `
       UPDATE incidents
       SET
-        status = $2,
+        status = $2::varchar,
         resolved_at = CASE
-          WHEN $2 = 'RESOLVED' THEN COALESCE(resolved_at, NOW())
+          WHEN $2::varchar = 'RESOLVED' THEN COALESCE(resolved_at, NOW())
           ELSE NULL
         END,
         updated_at = NOW()

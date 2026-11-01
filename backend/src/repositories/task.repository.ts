@@ -1,4 +1,5 @@
 import { pool } from "../db/client.js";
+import type { TaskStatus } from "../types/taskTypes.js";
 import type { UpdateTaskInput } from "../validators/task.validator.js";
 
 export async function createTask(incidentId: string, title: string, description: string | null | undefined, createdBy: string, assignedTo?: string | null | undefined) {
@@ -32,12 +33,16 @@ export async function findTasks(incidentId: string) {
         t.created_at,
         t.updated_at,
         t.created_by,
+        creator.name AS created_by_name,
         t.assigned_to AS assigned_user_id,
         u.name AS assigned_user_name,
         im.role AS assigned_user_role
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assigned_to
-      LEFT JOIN incident_members im ON im.incident_id = t.incident_id AND im.user_id = t.assigned_to
+      LEFT JOIN users creator ON creator.id = t.created_by
+      LEFT JOIN incident_members im
+        ON im.incident_id = t.incident_id
+        AND im.user_id = t.assigned_to
       WHERE t.incident_id = $1
       ORDER BY
         CASE t.status
@@ -84,7 +89,6 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
         title = CASE WHEN $2::boolean THEN $3::varchar ELSE title END,
         description = CASE WHEN $4::boolean THEN $5::text ELSE description END,
         assigned_to = CASE WHEN $6::boolean THEN $7::uuid ELSE assigned_to END,
-        status = CASE WHEN $8::boolean THEN $9::varchar ELSE status END,
         updated_at = NOW()
       WHERE id = $1
       RETURNING
@@ -98,7 +102,32 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
         created_at,
         updated_at
     `,
-    [taskId, input.title !== undefined, input.title ?? null, input.description !== undefined, input.description ?? null, input.assignedTo !== undefined, input.assignedTo ?? null, input.status !== undefined, input.status ?? null],
+    [taskId, input.title !== undefined, input.title ?? null, input.description !== undefined, input.description ?? null, input.assignedTo !== undefined, input.assignedTo ?? null],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+export async function updateTaskStatus(taskId: string, status: TaskStatus) {
+  const result = await pool.query(
+    `
+      UPDATE tasks
+      SET
+        status = $2::varchar,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING
+        id,
+        incident_id,
+        title,
+        description,
+        status,
+        assigned_to,
+        created_by,
+        created_at,
+        updated_at
+    `,
+    [taskId, status],
   );
 
   return result.rows[0] ?? null;

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { registerUser } from "@/api/auth.api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function RegisterPage() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +48,9 @@ export default function RegisterPage() {
       // Send the user to login to establish an authenticated session.
       router.push("/login?registered=1");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create your account.");
+      const message = err instanceof Error ? err.message : "Unable to create your account.";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }

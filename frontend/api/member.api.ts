@@ -30,6 +30,14 @@ export async function getMembersByIncidentId(incidentId: string) {
   return response.members;
 }
 
+export async function updateMemberRole(incidentId: string, userId: string, newRole: Extract<IncidentMemberRole, "RESPONDER" | "VIEWER">) {
+  const response = await apiFetch<{ member: IncidentMember }>(`/incidents/${incidentId}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role: newRole }),
+  });
+  return response.member;
+}
+
 export async function removeMemberFromIncident(incidentId: string, userId: string) {
   const response = await apiFetch<{ member: IncidentMember }>(`/incidents/${incidentId}/members/${userId}`, {
     method: "DELETE",

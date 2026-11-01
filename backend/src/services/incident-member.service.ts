@@ -1,4 +1,4 @@
-import { addMember, findMembers, removeMember, isIncidentMember } from "../repositories/incident-member.repository.js";
+import { addMember, findMembers, removeMember, isIncidentMember, updateMemberRole } from "../repositories/incident-member.repository.js";
 import { findIncidentById } from "../repositories/incident.repository.js";
 import { findUserById, findUserCandidateByEmail } from "../repositories/user.repository.js";
 import { getIncidentRole } from "../repositories/incident-access.repository.js";
@@ -62,6 +62,22 @@ export async function list(incidentId: string, currentUserId: string) {
   }
 
   return findMembers(incidentId);
+}
+
+export async function updateRole(incidentId: string, userId: string, newRole: "OWNER" | "RESPONDER" | "VIEWER", currentUserId: string) {
+  const incident = await findIncidentById(incidentId);
+  if (!incident) throw new HttpError(404, "Incident not found");
+
+  const role = await getIncidentRole(incidentId, currentUserId);
+  if (role !== "OWNER") {
+    throw new HttpError(403, "Only the incident owner can update member roles");
+  }
+
+  if (!isIncidentMember(incidentId, userId)) {
+    throw new HttpError(404, "User is not a member of the incident");
+  }
+
+  return await updateMemberRole(incidentId, userId, newRole);
 }
 
 export async function remove(incidentId: string, userId: string, currentUserId: string) {

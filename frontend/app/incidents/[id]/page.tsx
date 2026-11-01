@@ -16,6 +16,7 @@ import { Loading } from "@/components/ui/Loading";
 import { getIncidentById } from "@/api/incident.api";
 import { getMembersByIncidentId } from "@/api/member.api";
 import { getTasksByIncidentId } from "@/api/tasks.api";
+import { useAppSelector } from "@/store/hooks";
 
 import type { Incident } from "@/types/incidentTypes";
 import type { IncidentMember } from "@/types/memberTypes";
@@ -26,6 +27,7 @@ type WorkspaceTab = "activity" | "conversation";
 export default function IncidentDetailsPage() {
   const params = useParams<{ id: string }>();
   const incidentId = params.id;
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null);
 
   const [incident, setIncident] = useState<Incident | null>(null);
   const [members, setMembers] = useState<IncidentMember[]>([]);
@@ -240,7 +242,7 @@ export default function IncidentDetailsPage() {
 
           <aside className="min-w-0 space-y-5">
             <section id="response-tasks" className="scroll-mt-6 rounded-2xl border border-[#252b35] bg-[#0e1117] p-4">
-              {tasksError ? <ErrorState message={tasksError} onRetry={() => void refreshTasks()} /> : <TaskList incidentId={incidentId} tasks={tasks} members={members} canManage={canManageTasks} onTasksChanged={refreshTasks} />}
+              {tasksError ? <ErrorState message={tasksError} onRetry={() => void refreshTasks()} /> : <TaskList incidentId={incidentId} tasks={tasks} members={members} currentUserId={currentUserId} currentUserRole={incident.current_user_role ?? "VIEWER"} canManage={canManageTasks} onTasksChanged={refreshTasks} />}
             </section>
 
             <section id="responders" className="scroll-mt-6 rounded-2xl border border-[#252b35] bg-[#0e1117] p-4">

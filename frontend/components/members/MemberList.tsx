@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { LoaderCircle, Plus, UserMinus, Users, X } from "lucide-react";
+import { LoaderCircle, Plus, Edit, UserMinus, Users, X } from "lucide-react";
 
-import { addMemberToIncident, findMemberCandidate, removeMemberFromIncident } from "@/api/member.api";
-import type { IncidentMember } from "@/types/memberTypes";
+import { addMemberToIncident, findMemberCandidate, removeMemberFromIncident, updateMemberRole } from "@/api/member.api";
+import type { IncidentMember, IncidentMemberRole } from "@/types/memberTypes";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface MemberListProps {
   incidentId: string;
@@ -22,24 +24,39 @@ type Candidate = {
 
 export function MemberList({ incidentId, members, incidentOwnerId, canManage, onMembersChanged }: MemberListProps) {
   const [addOpen, setAddOpen] = useState(false);
+  const [updateOpen, setUpdateOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [updatingUser, setUpdatingUser] = useState<Candidate | null>(null);
+  const [confirmMember, setConfirmMember] = useState<IncidentMember | null>(null);
+  const [newRole, setNewRole] = useState<Extract<IncidentMemberRole, "RESPONDER" | "VIEWER">>("RESPONDER");
+  const { showToast } = useToast();
+
+  async function updateRole(member: Pick<IncidentMember, "id" | "name" | "email">, newRole: Extract<IncidentMemberRole, "RESPONDER" | "VIEWER">) {
+    if (member.id === incidentOwnerId) return;
+    setUpdatingUser({ id: member.id, name: member.name, email: member.email });
+    try {
+      await updateMemberRole(incidentId, member.id, newRole);
+      showToast(`${member.name}'s role was updated.`, "success");
+      await onMembersChanged();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Unable to update member role.", "error");
+    } finally {
+      setUpdatingUser(null);
+      setUpdateOpen(false);
+    }
+  }
 
   async function removeMember(member: IncidentMember) {
     if (member.id === incidentOwnerId) return;
 
-    if (!window.confirm(`Remove ${member.name} from this incident? Their assigned incident tasks will become unassigned.`)) return;
-
     setRemovingId(member.id);
-    setError(null);
 
     try {
       await removeMemberFromIncident(incidentId, member.id);
-      setNotice(`${member.name} was removed.`);
+      showToast(`${member.name} was removed.`, "success");
       await onMembersChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to remove responder.");
+      showToast(err instanceof Error ? err.message : "Unable to remove responder.", "error");
     } finally {
       setRemovingId(null);
     }
@@ -66,17 +83,6 @@ export function MemberList({ incidentId, members, incidentOwnerId, canManage, on
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p role="status" className="mt-4 rounded-lg border border-[#285a48] bg-[#102018] px-3 py-2 text-xs text-[#80c6a9]">
-          {notice}
-        </p>
-      )}
-
       {members.length === 0 ? (
         <div className="mt-4 rounded-xl border border-dashed border-[#343b46] px-4 py-8 text-center">
           <p className="text-sm text-[#aeb5bf]">No responders assigned</p>
@@ -100,11 +106,28 @@ export function MemberList({ incidentId, members, incidentOwnerId, canManage, on
                   <RoleBadge role={member.role} />
                 </div>
 
-                {canManage && !owner && (
-                  <button type="button" disabled={removing} onClick={() => void removeMember(member)} aria-label={`Remove ${member.name}`} className="rounded-lg p-2 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585] disabled:opacity-50">
-                    {removing ? <LoaderCircle size={15} className="animate-spin" /> : <UserMinus size={15} />}
-                  </button>
-                )}
+                <div className="flex gap-0">
+                  {canManage && !owner && (
+                    <button
+                      type="button"
+                      disabled={removing}
+                      onClick={() => {
+                        setUpdateOpen(true);
+                        setUpdatingUser({ id: member.id, name: member.name, email: member.email });
+                      }}
+                      aria-label={`Remove ${member.name}`}
+                      className="rounded-lg p-2 text-[#68717f] transition hover:bg-[#6ac263]/10 hover:text-[#6ac263] disabled:opacity-50"
+                    >
+                      {updateOpen ? <LoaderCircle size={15} className="animate-spin" /> : <Edit size={15} />}
+                    </button>
+                  )}
+
+                  {canManage && !owner && (
+                    <button type="button" disabled={removing} onClick={() => setConfirmMember(member)} aria-label={`Remove ${member.name}`} className="rounded-lg p-2 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585] disabled:opacity-50">
+                      {removing ? <LoaderCircle size={15} className="animate-spin" /> : <UserMinus size={15} />}
+                    </button>
+                  )}
+                </div>
               </article>
             );
           })}
@@ -116,12 +139,66 @@ export function MemberList({ incidentId, members, incidentOwnerId, canManage, on
           incidentId={incidentId}
           onClose={() => setAddOpen(false)}
           onAdded={async (name) => {
-            setNotice(`${name} was added to the incident.`);
-            setError(null);
+            showToast(`${name} was added to the incident.`, "success");
             await onMembersChanged();
             setAddOpen(false);
           }}
         />
+      )}
+      {confirmMember && (
+        <ConfirmationDialog
+          title="Remove responder?"
+          message={`Remove ${confirmMember.name} from this incident? Their assigned incident tasks will become unassigned.`}
+          confirmLabel="Remove"
+          onCancel={() => setConfirmMember(null)}
+          onConfirm={() => {
+            const member = confirmMember;
+            setConfirmMember(null);
+            void removeMember(member);
+          }}
+        />
+      )}
+
+      {updateOpen && (
+        //Create a custom dialogue box to update member role with an option to select between RESPONDER and VIEWER
+        <div className="fixed inset-0 z-50 flex items-end bg-black/65 sm:items-center sm:justify-center sm:p-5">
+          <div className="w-full rounded-t-2xl border border-[#343b46] bg-[#0e1117] p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-[#f1f3f5]">Update role</h3>
+                <p className="mt-1 text-xs text-[#68717f]">Change the role of {updatingUser?.name}.</p>
+              </div>
+              <button type="button" onClick={() => setUpdateOpen(false)} className="rounded-lg p-2 text-[#8993a1] hover:bg-[#1a202a] hover:text-white">
+                <X size={17} />
+              </button>
+            </div>
+            <div className="mt-5">
+              <label htmlFor="role" className="block text-sm font-medium text-[#f1f3f5]">
+                Role
+              </label>
+              <select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value as "RESPONDER" | "VIEWER")} className="mt-1 block w-full rounded-md border border-[#343b46] bg-[#0e1117] py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="RESPONDER">Responder</option>
+                <option value="VIEWER">Viewer</option>
+              </select>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUpdateOpen(false);
+                  setUpdatingUser(null);
+                }}
+                className="rounded-lg px-3 py-2 text-sm text-[#aeb5bf] hover:bg-[#1a202a]"
+              >
+                Cancel
+              </button>
+              <button type="button" onClick={() => updatingUser && void updateRole(updatingUser, newRole)} className="rounded-lg bg-blue-500 px-3 py-2 text-sm text-white hover:bg-blue-600">
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
@@ -133,19 +210,18 @@ function AddResponderDialog({ incidentId, onClose, onAdded }: { incidentId: stri
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function lookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLookingUp(true);
-    setError(null);
     setCandidate(null);
 
     try {
       const user = await findMemberCandidate(incidentId, email.trim());
       setCandidate(user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to find this user.");
+      showToast(err instanceof Error ? err.message : "Unable to find this user.", "error");
     } finally {
       setLookingUp(false);
     }
@@ -155,13 +231,12 @@ function AddResponderDialog({ incidentId, onClose, onAdded }: { incidentId: stri
     if (!candidate) return;
 
     setAdding(true);
-    setError(null);
 
     try {
       await addMemberToIncident(incidentId, { userId: candidate.id, role });
       await onAdded(candidate.name);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to add responder.");
+      showToast(err instanceof Error ? err.message : "Unable to add responder.", "error");
       setAdding(false);
     }
   }
@@ -178,8 +253,6 @@ function AddResponderDialog({ incidentId, onClose, onAdded }: { incidentId: stri
             <X size={17} />
           </button>
         </div>
-
-        {error && <p className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">{error}</p>}
 
         <form onSubmit={lookup} className="mt-5 flex gap-2">
           <input

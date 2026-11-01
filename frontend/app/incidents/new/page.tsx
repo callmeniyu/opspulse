@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/ToastProvider";
 
 import type { Incident, IncidentSeverity } from "@/types/incidentTypes";
 import { setLoading } from "@/store/slices/incidentSlice";
@@ -26,6 +27,7 @@ export default function NewIncidentPage() {
   const dispatch = useAppDispatch();
 
   const [error, setError] = useState("");
+  const { showToast } = useToast();
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +44,9 @@ export default function NewIncidentPage() {
 
       router.push(`/incidents/${response.incident.id}`);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Failed to create incident");
+      const message = error instanceof Error ? error.message : "Failed to create incident";
+      setError(message);
+      showToast(message, "error");
     } finally {
       dispatch(setLoading(false));
     }

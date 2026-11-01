@@ -39,6 +39,20 @@ export async function findMembers(incidentId: string) {
   return result.rows;
 }
 
+export async function updateMemberRole(incidentId: string, userId: string, newRole: IncidentMemberRole) {
+  const result = await pool.query(
+    `
+        UPDATE incident_members
+        SET role = $3
+        WHERE incident_id = $1 AND user_id = $2
+        RETURNING *
+      `,
+    [incidentId, userId, newRole],
+  );
+
+  return result.rows[0];
+}
+
 export async function removeMember(incidentId: string, userId: string) {
   const client = await pool.connect();
 

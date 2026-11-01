@@ -5,7 +5,7 @@ CREATE TABLE incidents (
 
     description TEXT,
 
-    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    status VARCHAR(30) CHECK (status IN ('OPEN', 'INVESTIGATING', 'MITIGATED', 'RESOLVED')) NOT NULL DEFAULT 'OPEN',
 
     severity VARCHAR(20) NOT NULL,
 
@@ -13,5 +13,7 @@ CREATE TABLE incidents (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    resolved_at TIMESTAMPTZ
 );
