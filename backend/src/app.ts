@@ -9,6 +9,7 @@ import incidentMemberRoutes from "./routes/incident-member.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import taskRouter from "./routes/task.routes.js";
 import personalWorkRoutes from "./routes/personal-work.routes.js";
+import eventRouter from "./routes/incident-events.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/incidents", incidentRoutes);
 app.use("/api/incidents", incidentMemberRoutes);
 app.use("/api", taskRouter);
 app.use("/api", personalWorkRoutes);
+app.use("/api/incidents", eventRouter);
 
 app.use(errorHandler);
 export default app;

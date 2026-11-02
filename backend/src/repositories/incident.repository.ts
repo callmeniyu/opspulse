@@ -53,12 +53,9 @@ export async function findIncidents() {
       SELECT
         i.id,
         i.title,
-        i.description,
         i.status,
         i.severity,
-        i.created_by,
         i.created_at,
-        i.updated_at,
         u.name AS creator_name
       FROM incidents i
       JOIN users u
