@@ -145,3 +145,18 @@ export async function deleteTask(taskId: string) {
 
   return result.rows[0] ?? null;
 }
+
+export async function hasTasksCreatedBy(incidentId: string, userId: string): Promise<boolean> {
+  const result = await pool.query(
+    `
+      SELECT 1
+      FROM tasks
+      WHERE incident_id = $1
+        AND created_by = $2
+      LIMIT 1
+    `,
+    [incidentId, userId],
+  );
+
+  return result.rowCount !== null && result.rowCount > 0;
+}

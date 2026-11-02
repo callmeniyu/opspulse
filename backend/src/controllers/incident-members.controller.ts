@@ -2,7 +2,7 @@ import * as incidentMemberService from "../services/incident-member.service.js";
 
 import type { Request, Response, NextFunction } from "express";
 
-import { addMemberSchema } from "../validators/incident-member.validator.js";
+import { addMemberSchema, updateMemberRoleSchema } from "../validators/incident-member.validator.js";
 
 export async function findCandidate(req: Request<{ incidentId: string }>, res: Response, next: NextFunction) {
   try {
@@ -63,7 +63,7 @@ export async function updateRole(req: Request<{ incidentId: string; userId: stri
       return res.status(401).json({ message: "Unauthorized" });
     }
     const { incidentId, userId } = req.params;
-    const { role } = req.body;
+    const { role } = updateMemberRoleSchema.parse(req.body);
 
     const result = await incidentMemberService.updateRole(incidentId, userId, role, req.user.id);
 

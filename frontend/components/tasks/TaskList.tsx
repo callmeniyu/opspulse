@@ -99,11 +99,14 @@ export function TaskList({ incidentId, tasks, members, currentUserId, currentUse
             {tasks.map((task) => {
               const pending = pendingTaskId === task.id;
               const completedTask = task.status === "COMPLETED";
-              const isTaskCreator = task.created_by === currentUserId;
-              const isViewer = currentUserRole === "VIEWER";
 
-              const canEditTask = isTaskCreator && !isViewer;
-              const canChangeStatus = !isViewer && (isTaskCreator || canManage);
+              const isTaskCreator = task.created_by === currentUserId;
+              const isTaskAssignee = task.assigned_user_id === currentUserId;
+              const isIncidentOwner = currentUserRole === "OWNER";
+
+              const canEditTask = isTaskCreator || isIncidentOwner;
+
+              const canChangeStatus = isTaskCreator || isTaskAssignee || isIncidentOwner;
 
               return (
                 <article key={task.id} className="py-3.5 first:pt-0 last:pb-0">
@@ -121,20 +124,13 @@ export function TaskList({ incidentId, tasks, members, currentUserId, currentUse
 
                         {(canEditTask || canChangeStatus) && (
                           <div className="flex shrink-0 items-center">
-                            <button
-                              type="button"
-                              disabled={pending}
-                              onClick={() => setTaskDialog({ task, mode: canEditTask ? "edit" : "status" })}
-                              aria-label={`Edit ${task.title}`}
-                              title={canEditTask ? "Edit task" : "Update task status"}
-                              className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#1a202a] hover:text-[#dce0e5]"
-                            >
+                            <button type="button" disabled={pending} onClick={() => setTaskDialog({ task, mode: canEditTask ? "edit" : "status" })} aria-label={`Edit ${task.title}`} title={canEditTask ? "Edit task" : "Update task status"} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#1a202a] hover:text-[#dce0e5]">
                               <Pencil size={14} />
                             </button>
                             {canEditTask && (
-                                <button type="button" disabled={pending} onClick={() => setConfirmTask(task)} aria-label={`Delete ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585]">
-                                  {pending ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                </button>
+                              <button type="button" disabled={pending} onClick={() => setConfirmTask(task)} aria-label={`Delete ${task.title}`} className="rounded-md p-1.5 text-[#68717f] transition hover:bg-[#ff6262]/10 hover:text-[#ff8585]">
+                                {pending ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              </button>
                             )}
                           </div>
                         )}
@@ -260,19 +256,21 @@ function TaskDialog({ title, mode, members, initialTask, submitLabel, onClose, o
         {error && <p className="mt-4 rounded-lg border border-[#ff6262]/20 bg-[#ff6262]/5 px-3 py-2 text-xs text-[#ff8585]">{error}</p>}
 
         <div className="mt-5 space-y-4">
-          {mode !== "status" && <>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Task title</span>
-            <input autoFocus required minLength={3} maxLength={255} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="e.g. Check database connection pool" className="w-full rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
-          </label>
+          {mode !== "status" && (
+            <>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Task title</span>
+                <input autoFocus required minLength={3} maxLength={255} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="e.g. Check database connection pool" className="w-full rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
+              </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">
-              Description <span className="text-[#505865]">(optional)</span>
-            </span>
-            <textarea rows={4} maxLength={5000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What needs to happen? What does done look like?" className="w-full resize-none rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
-          </label>
-          </>}
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">
+                  Description <span className="text-[#505865]">(optional)</span>
+                </span>
+                <textarea rows={4} maxLength={5000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What needs to happen? What does done look like?" className="w-full resize-none rounded-lg border border-[#303744] bg-[#090b0f] px-3 py-2.5 text-sm text-[#e9ebee] outline-none placeholder:text-[#505865] focus:border-[#7185ff]" />
+              </label>
+            </>
+          )}
 
           {mode !== "create" && (
             <fieldset>
@@ -291,41 +289,43 @@ function TaskDialog({ title, mode, members, initialTask, submitLabel, onClose, o
             </fieldset>
           )}
 
-          {mode !== "status" && <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Assignee</span>
-            <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[#303744] bg-[#090b0f] p-1.5">
-              <button type="button" onClick={() => setAssignedTo("")} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition ${assignedTo === "" ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#252b35] text-[#8993a1]">
-                  <UserRound size={12} />
-                </span>
-                <span className="flex-1">Unassigned</span>
-                {assignedTo === "" && <Check size={14} className="text-[#aab7ff]" />}
-              </button>
+          {mode !== "status" && (
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-[#aeb5bf]">Assignee</span>
+              <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[#303744] bg-[#090b0f] p-1.5">
+                <button type="button" onClick={() => setAssignedTo("")} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition ${assignedTo === "" ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#252b35] text-[#8993a1]">
+                    <UserRound size={12} />
+                  </span>
+                  <span className="flex-1">Unassigned</span>
+                  {assignedTo === "" && <Check size={14} className="text-[#aab7ff]" />}
+                </button>
 
-              {members.map((member) => {
-                const selected = assignedTo === member.id;
+                {members.map((member) => {
+                  const selected = assignedTo === member.id;
 
-                return (
-                  <button key={member.id} type="button" onClick={() => setAssignedTo(member.id)} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition ${selected ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#343b46] text-[10px] font-semibold text-[#dce0e5]">{member.name.slice(0, 1).toUpperCase()}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{member.name}</span>
-                      <span className="block text-[10px] text-[#68717f]">{member.role.toLowerCase()}</span>
-                    </span>
-                    {selected && <Check size={14} className="shrink-0 text-[#aab7ff]" />}
-                  </button>
-                );
-              })}
-            </div>
-            <select aria-hidden="true" tabIndex={-1} value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="hidden">
-              <option value="">Leave unassigned</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name} · {member.role.toLowerCase()}
-                </option>
-              ))}
-            </select>
-          </label>}
+                  return (
+                    <button key={member.id} type="button" onClick={() => setAssignedTo(member.id)} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition ${selected ? "bg-[#252b35] text-[#f1f3f5]" : "text-[#8993a1] hover:bg-[#141820]"}`}>
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#343b46] text-[10px] font-semibold text-[#dce0e5]">{member.name.slice(0, 1).toUpperCase()}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium">{member.name}</span>
+                        <span className="block text-[10px] text-[#68717f]">{member.role.toLowerCase()}</span>
+                      </span>
+                      {selected && <Check size={14} className="shrink-0 text-[#aab7ff]" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <select aria-hidden="true" tabIndex={-1} value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="hidden">
+                <option value="">Leave unassigned</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name} · {member.role.toLowerCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">

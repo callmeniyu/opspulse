@@ -16,6 +16,15 @@ export interface Incident {
   resolved_at?: string | null;
 }
 
+export interface IncidentSummary {
+  id: string;
+  title: string;
+  status: IncidentStatus;
+  severity: IncidentSeverity;
+  created_at: string;
+  creator_name: string;
+}
+
 export interface CreateIncidentInput {
   title: string;
   description?: string;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Activity, ArrowLeft, CheckCircle2, Clock3, ListTodo, MessageSquare, RefreshCw, ShieldAlert, Users } from "lucide-react";
+import { Activity, ArrowLeft, CheckCircle2, ChevronDown, Clock3, ListTodo, MessageSquare, RefreshCw, ShieldAlert, Users } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { IncidentStatusBadge } from "@/components/incidents/IncidentStatusBadge";
@@ -16,13 +16,20 @@ import { Loading } from "@/components/ui/Loading";
 import { getIncidentById } from "@/api/incident.api";
 import { getMembersByIncidentId } from "@/api/member.api";
 import { getTasksByIncidentId } from "@/api/tasks.api";
+import { getIncidentEvents } from "@/api/incident-events.api";
 import { useAppSelector } from "@/store/hooks";
 
 import type { Incident } from "@/types/incidentTypes";
 import type { IncidentMember } from "@/types/memberTypes";
 import type { Task } from "@/types/taskTypes";
+import type { IncidentEvent } from "@/types/incidentEventTypes";
+import ActivityEventItem from "@/components/incidents/ActivityEventItem";
 
 type WorkspaceTab = "activity" | "conversation";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function IncidentDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -33,6 +40,9 @@ export default function IncidentDetailsPage() {
   const [members, setMembers] = useState<IncidentMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("activity");
+
+  const [events, setEvents] = useState<IncidentEvent[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,49 +64,84 @@ export default function IncidentDetailsPage() {
     try {
       const result = await getIncidentById(incidentId);
       setIncident(result.incident);
+
+      const [membersResult, tasksResult, eventsResult] = await Promise.allSettled([getMembersByIncidentId(incidentId), getTasksByIncidentId(incidentId), getIncidentEvents(incidentId)]);
+
+      if (membersResult.status === "fulfilled") {
+        setMembers(membersResult.value);
+      } else {
+        setMembersError(getErrorMessage(membersResult.reason, "Responders could not be loaded."));
+      }
+
+      if (tasksResult.status === "fulfilled") {
+        setTasks(tasksResult.value);
+      } else {
+        setTasksError(getErrorMessage(tasksResult.reason, "Response tasks could not be loaded."));
+      }
+
+      if (eventsResult.status === "fulfilled") {
+        setEvents(eventsResult.value);
+      } else {
+        setEventsError(getErrorMessage(eventsResult.reason, "Incident activity could not be loaded."));
+      }
     } catch (error) {
       setIncident(null);
-      setIncidentError(error instanceof Error ? error.message : "Unable to load this incident.");
+      setIncidentError(getErrorMessage(error, "Unable to load this incident."));
+    } finally {
       setLoading(false);
       setRefreshing(false);
-      return;
     }
+  }
 
-    const [membersResult, tasksResult] = await Promise.allSettled([getMembersByIncidentId(incidentId), getTasksByIncidentId(incidentId)]);
-
-    if (membersResult.status === "fulfilled") {
-      setMembers(membersResult.value);
-    } else {
-      setMembersError("Responders could not be loaded.");
-    }
+  async function refreshTasks() {
+    const [tasksResult, eventsResult] = await Promise.allSettled([getTasksByIncidentId(incidentId), getIncidentEvents(incidentId)]);
 
     if (tasksResult.status === "fulfilled") {
       setTasks(tasksResult.value);
     } else {
-      setTasksError("Response tasks could not be loaded.");
+      setTasksError(getErrorMessage(tasksResult.reason, "Unable to refresh response tasks."));
     }
 
-    setLoading(false);
-    setRefreshing(false);
-  }
-
-  async function refreshTasks() {
-    const updatedTasks = await getTasksByIncidentId(incidentId);
-    setTasks(updatedTasks);
-    setTasksError(null);
+    if (eventsResult.status === "fulfilled") {
+      setEvents(eventsResult.value);
+    } else {
+      setEventsError(getErrorMessage(eventsResult.reason, "Unable to refresh incident activity."));
+    }
   }
 
   async function refreshMembersAndTasks() {
-    const [membersResult, tasksResult] = await Promise.allSettled([getMembersByIncidentId(incidentId), getTasksByIncidentId(incidentId)]);
+    const [membersResult, tasksResult, eventsResult] = await Promise.allSettled([getMembersByIncidentId(incidentId), getTasksByIncidentId(incidentId), getIncidentEvents(incidentId)]);
 
     if (membersResult.status === "fulfilled") {
       setMembers(membersResult.value);
       setMembersError(null);
+    } else {
+      setMembersError(getErrorMessage(membersResult.reason, "Unable to refresh incident members."));
     }
 
     if (tasksResult.status === "fulfilled") {
       setTasks(tasksResult.value);
       setTasksError(null);
+    } else {
+      setTasksError(getErrorMessage(tasksResult.reason, "Unable to refresh response tasks."));
+    }
+
+    if (eventsResult.status === "fulfilled") {
+      setEvents(eventsResult.value);
+      setEventsError(null);
+    } else {
+      setEventsError(getErrorMessage(eventsResult.reason, "Unable to refresh incident activity."));
+    }
+  }
+
+  async function refreshEvents() {
+    try {
+      const result = await getIncidentEvents(incidentId);
+
+      setEvents(result);
+      setEventsError(null);
+    } catch (error) {
+      setEventsError(getErrorMessage(error, "Unable to load incident activity."));
     }
   }
 
@@ -218,8 +263,7 @@ export default function IncidentDetailsPage() {
                   </WarRoomTab>
                 </div>
               </div>
-
-              {activeTab === "activity" ? <ActivityFeed incident={incident} /> : <ConversationEmptyState />}
+              {activeTab === "activity" ? <ActivityFeed events={events} error={eventsError} onRetry={() => void refreshEvents()} /> : <ConversationEmptyState />}{" "}
             </section>
 
             <section id="incident-details" className="scroll-mt-6 rounded-2xl border border-[#252b35] bg-[#0e1117] p-5">
@@ -242,7 +286,8 @@ export default function IncidentDetailsPage() {
 
           <aside className="min-w-0 space-y-5">
             <section id="response-tasks" className="scroll-mt-6 rounded-2xl border border-[#252b35] bg-[#0e1117] p-4">
-              {tasksError ? <ErrorState message={tasksError} onRetry={() => void refreshTasks()} /> : <TaskList incidentId={incidentId} tasks={tasks} members={members} currentUserId={currentUserId} currentUserRole={incident.current_user_role ?? "VIEWER"} canManage={canManageTasks} onTasksChanged={refreshTasks} />}
+              {tasksError && <ErrorState message={tasksError} onRetry={() => void refreshTasks()} />}
+              <TaskList incidentId={incidentId} tasks={tasks} members={members} currentUserId={currentUserId} currentUserRole={incident.current_user_role ?? "VIEWER"} canManage={canManageTasks} onTasksChanged={refreshTasks} />{" "}
             </section>
 
             <section id="responders" className="scroll-mt-6 rounded-2xl border border-[#252b35] bg-[#0e1117] p-4">
@@ -285,20 +330,66 @@ function WarRoomTab({ active, onClick, icon, children }: { active: boolean; onCl
   );
 }
 
-function ActivityFeed({ incident }: { incident: Incident }) {
-  return (
-    <div className="p-5">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <MiniStatus label="Status" value={<IncidentStatusBadge status={incident.status} />} />
-        <MiniStatus label="Severity" value={<SeverityBadge severity={incident.severity} />} />
-        <MiniStatus label="Responders" value="Team coordination" />
-      </div>
+function ActivityFeed({ events, error, onRetry }: { events: IncidentEvent[]; error: string | null; onRetry: () => void }) {
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
-      <div className="mt-6 space-y-5 border-l border-[#252b35] pl-5">
-        <TimelineItem title="Incident created" description="The incident workspace is ready for response coordination." time={new Date(incident.created_at).toLocaleString()} active />
-        <TimelineItem title={`Current state: ${formatLabel(incident.status)}`} description="New status changes, responder actions, and task updates will appear here." />
+  if (error) {
+    return (
+      <div className="p-5">
+        <p className="text-sm text-red-400">{error}</p>
+        <button type="button" onClick={onRetry} className="mt-3 text-xs text-[#aab7ff]">
+          Try again
+        </button>
       </div>
-    </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-[#aeb5bf]">No activity recorded yet.</p>
+      </div>
+    );
+  }
+
+  const recentEvents = events.slice(0, 5);
+  const olderEvents = events.slice(5);
+
+  return (
+    <>
+      <ol className="px-5 pb-0 pt-5">
+        {recentEvents.map((event, index) => (
+          <ActivityEventItem key={event.id} event={event} isLast={index === recentEvents.length - 1 && (olderEvents.length === 0 || !showAllEvents)} />
+        ))}
+      </ol>
+
+      {olderEvents.length > 0 && (
+        <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${showAllEvents ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <ol className="px-5 pb-0">
+              {olderEvents.map((event, index) => (
+                <ActivityEventItem key={event.id} event={event} isLast={index === olderEvents.length - 1} />
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+
+      {olderEvents.length > 0 && (
+        <div className="px-5 pb-5 pt-3">
+          <button
+            type="button"
+            aria-expanded={showAllEvents}
+            aria-controls="older-incident-events"
+            onClick={() => setShowAllEvents((expanded) => !expanded)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#303744] bg-[#11151c] px-3 py-2 text-xs font-medium text-[#aab7ff] transition hover:border-[#505a70] hover:bg-[#171d27]"
+          >
+            {showAllEvents ? "Show only 5 recent events" : `Show all ${events.length} events`}
+            <ChevronDown size={14} className={`transition-transform duration-300 ${showAllEvents ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
