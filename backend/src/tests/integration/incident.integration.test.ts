@@ -8,9 +8,12 @@ import { createAccessToken } from "../../utils/tokens.js";
 
 describe("POST /api/incidents - database integration", () => {
   const userId = randomUUID();
+  const outsiderId = randomUUID();
+  const fixtureIncidentId = randomUUID();
   const email = `integration-${randomUUID()}@test.com`;
 
   let accessToken: string;
+  let outsiderToken: string;
 
   beforeAll(async () => {
     const databaseResult = await pool.query("SELECT current_database() AS name");
@@ -26,6 +29,35 @@ describe("POST /api/incidents - database integration", () => {
     );
 
     accessToken = createAccessToken(userId);
+
+    // Create a second user who is NOT a member of the incident.
+    await pool.query(
+      `
+    INSERT INTO users (id, name, email, password_hash)
+    VALUES ($1, $2, $3, $4)
+  `,
+      [outsiderId, "Non Member", `outsider-${randomUUID()}@test.com`, "test-hash"],
+    );
+
+    outsiderToken = createAccessToken(outsiderId);
+
+    // Create an incident owned by the first user.
+    await pool.query(
+      `
+    INSERT INTO incidents (id, title, severity, created_by)
+    VALUES ($1, $2, $3, $4)
+  `,
+      [fixtureIncidentId, "Authorization Test Incident", "SEV2", userId],
+    );
+
+    // Add only the first user as OWNER.
+    await pool.query(
+      `
+    INSERT INTO incident_members (incident_id, user_id, role)
+    VALUES ($1, $2, $3)
+  `,
+      [fixtureIncidentId, userId, "OWNER"],
+    );
   });
 
   afterAll(async () => {
@@ -33,7 +65,32 @@ describe("POST /api/incidents - database integration", () => {
 
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
+    await pool.query("DELETE FROM users WHERE id = $1", [outsiderId]);
+
     await pool.end();
+  });
+
+  it("denies incident access to a non-member", async () => {
+    const response = await request(app).get(`/api/incidents/${fixtureIncidentId}`).set("Authorization", `Bearer ${outsiderToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toContain("You do not have access to this incident");
+  });
+
+  it("rejects an incident with a non-existent creator", async () => {
+    const nonExistentUserId = randomUUID();
+
+    await expect(
+      pool.query(
+        `
+        INSERT INTO incidents (title, severity, created_by)
+        VALUES ($1, $2, $3)
+      `,
+        ["Invalid Incident", "SEV1", nonExistentUserId],
+      ),
+    ).rejects.toMatchObject({
+      code: "23503",
+    });
   });
 
   it("creates an incident, assigns its owner, and records its creation event", async () => {
